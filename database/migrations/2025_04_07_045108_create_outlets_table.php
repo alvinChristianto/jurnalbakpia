@@ -12,7 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('outlets', function (Blueprint $table) {
-            $table->id();
+            $table->string('id_outlet')->primary();
+            $table->enum('type', ['OFFICIAL', 'CABIN', 'DENTES']);
+            $table->string('name', length: 100);
+            $table->string('phone_number', length: 20)->nullable();
+            $table->string('address');
             $table->timestamps();
         });
     }

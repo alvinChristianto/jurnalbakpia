@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
+            $table->string('name', length: 100);
+            $table->enum('type', ['CASH', 'BANK']);
             $table->timestamps();
         });
     }
