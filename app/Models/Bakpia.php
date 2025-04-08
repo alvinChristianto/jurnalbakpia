@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Bakpia extends Model
 {
-    public function bakpiaTransaction(): HasMany
-    {
-        return $this->hasMany(BakpiaTransaction::class, 'id');
-    }
+    // public function bakpiaTransaction(): HasMany
+    // {
+    //     return $this->hasMany(BakpiaTransaction::class, 'id');
+    // }
 
     // public function user(): BelongsTo
     // {

@@ -76,9 +76,10 @@ class BakpiaTransactionResource extends Resource
                         Repeater::make('transaction_detail')
                             ->schema([
                                 Forms\Components\Select::make('id_bakpia')
-                                    ->relationship('bakpia', 'name')
-                                    ->searchable()
-                                    ->preload()
+                                    ->options(function (Get $get) {
+                                        return Bakpia::pluck('name', 'id');
+                                    })
+
                                     ->required(),
 
                                 Forms\Components\Select::make('box_varian')
@@ -131,13 +132,67 @@ class BakpiaTransactionResource extends Resource
                                         $set('total_price', $priceTotl);
                                     })
                             ),
-                        Forms\Components\Select::make('id')
+                        Forms\Components\Select::make('id_payment')
                             ->relationship('payment', 'name')
                             ->searchable()
                             ->preload()
                             ->required(),
                     ]),
 
+                Select::make('id_customer')
+                    ->relationship('customer', 'name')
+                    ->searchable()
+                    ->createOptionForm([
+                        Fieldset::make('Label')
+                            ->schema([
+                                Forms\Components\TextInput::make('name')
+                                    ->required()
+                                    ->maxLength(100),
+                                Forms\Components\TextInput::make('email')
+                                    ->label('Email address')
+                                    ->email()
+                                    ->maxLength(255),
+                                Forms\Components\TextInput::make('phone_number')
+                                    ->label('Phone number')
+                                    ->tel()
+                                    ->required(),
+
+                                Forms\Components\Select::make('gender')
+                                    ->options([
+                                        'L' => 'Laki-laki',
+                                        'P' => 'Perempuan'
+                                    ])
+                                    ->required(),
+                                Forms\Components\Textarea::make('address')
+                                    ->rows(2)
+                                    ->cols(10)
+                                    ->columnSpan('full'),
+
+                                Forms\Components\TextInput::make('city')
+                                    ->maxLength(255)
+                                    ->columnSpan('full'),
+                                Forms\Components\TextInput::make('province')
+                                    ->maxLength(255)
+                                    ->columnSpan('full'),
+
+                            ])
+                    ])
+                    ->required()
+                // ->createOptionUsing(function (array $data) {
+                //     $now = Carbon::now();
+
+                //     $year = $now->format('y'); // Use 'y' for two-digit year representation
+                //     $month = $now->format('m'); // Use 'm' for zero-padded month number
+                //     $day = $now->format('d'); // Use 'm' for zero-padded month number
+
+                //     // Generate three random digits
+                //     $randomDigits = str_pad(random_int(100, 999), 3, '0', STR_PAD_LEFT);
+
+                //     $transformId = "GUEST_" .  $year . $month . $day . $randomDigits;
+                //     $data['id_customer'] = $transformId;
+
+                //     return $data;
+                // })
             ]);
     }
 
@@ -145,10 +200,26 @@ class BakpiaTransactionResource extends Resource
     {
         return $table
             ->columns([
-                //
+                Tables\Columns\TextColumn::make('id_transaction')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('outlet.name')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('customer.name'),
+                Tables\Columns\TextColumn::make('payment.name'),
+                Tables\Columns\TextColumn::make('total_price')->numeric(),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('status')
+                    ->options([
+                        'PAID' => 'PAID',
+                        'REFUND' => 'REFUND',
+                    ]),
+                Tables\Filters\SelectFilter::make('id_payment')
+                    ->label('Payment')
+                    ->relationship('payment', 'name'),
+                Tables\Filters\SelectFilter::make('id_outlet')
+                    ->label('Outlet')
+                    ->relationship('outlet', 'name')
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

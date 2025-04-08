@@ -22,7 +22,7 @@ class CreateOutlet extends CreateRecord
         // Generate three random digits
         $randomDigits = str_pad(random_int(100, 999), 3, '0', STR_PAD_LEFT);
 
-        $transformId = "outlet_" . $day . $month . $year . $randomDigits;
+        $transformId = "outlet_" . $year . $month . $day . $randomDigits;
         $data['id_outlet'] = $transformId;
 
         return $data;

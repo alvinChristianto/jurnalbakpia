@@ -13,17 +13,17 @@ class CreateCustomer extends CreateRecord
     
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $now = Carbon::now();
+        // $now = Carbon::now();
 
-        $year = $now->format('y'); // Use 'y' for two-digit year representation
-        $month = $now->format('m'); // Use 'm' for zero-padded month number
-        $day = $now->format('d'); // Use 'm' for zero-padded month number
+        // $year = $now->format('y'); // Use 'y' for two-digit year representation
+        // $month = $now->format('m'); // Use 'm' for zero-padded month number
+        // $day = $now->format('d'); // Use 'm' for zero-padded month number
 
-        // Generate three random digits
-        $randomDigits = str_pad(random_int(100, 999), 3, '0', STR_PAD_LEFT);
+        // // Generate three random digits
+        // $randomDigits = str_pad(random_int(100, 999), 3, '0', STR_PAD_LEFT);
 
-        $transformId = "GUEST_" . $day . $month . $year . $randomDigits;
-        $data['id'] = $transformId;
+        // $transformId = "GUEST_" .  $year . $month . $day . $randomDigits;
+        // $data['id_customer'] = $transformId;
 
         return $data;
     }

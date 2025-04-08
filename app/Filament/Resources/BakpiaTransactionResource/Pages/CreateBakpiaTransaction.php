@@ -23,9 +23,9 @@ class CreateBakpiaTransaction extends CreateRecord
         // Generate three random digits
         $randomDigits = str_pad(random_int(100, 999), 3, '0', STR_PAD_LEFT);
 
-        $transformId = "BAK_" . $day . $month . $year . $randomDigits;
+        $transformId = "BAK_" . $year . $month . $day . $randomDigits;
         $data['id_transaction'] = $transformId;
-
+        // dd($data);
         return $data;
     }
     protected function getRedirectUrl(): string

@@ -27,18 +27,18 @@ class BakpiaTransaction extends Model
     
     public function payment(): BelongsTo
     {
-        return $this->belongsTo(Payment::class);
+        return $this->belongsTo(Payment::class, 'id_payment');
     }
-    public function bakpia(): BelongsTo
-    {
-        return $this->belongsTo(Bakpia::class);
-    }
+    // public function bakpia(): BelongsTo
+    // {
+    //     return $this->belongsTo(Bakpia::class, 'id');
+    // }
     public function outlet(): BelongsTo
     {
-        return $this->belongsTo(Outlet::class);
+        return $this->belongsTo(Outlet::class, 'id_outlet');
     }
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Customer::class, 'id_customer');
     }
 }

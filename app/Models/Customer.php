@@ -8,24 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model
 {
-    use HasFactory;
-    
-    protected $table = 'customers';
-    protected $primaryKey = 'id_customers';
-    public $incrementing = false;
-
-    // protected $casts = ['id_hotel' => 'string'];
-   
-    /**
-     * The data type of the primary key ID.
-     *
-     * @var string
-     */
-    protected $keyType = 'string';
-
     public function bakpiaTransaction(): HasMany
     {
-        return $this->hasMany(BakpiaTransaction::class, 'id');
+        return $this->hasMany(BakpiaTransaction::class);
     }
 
     // public function user(): BelongsTo
