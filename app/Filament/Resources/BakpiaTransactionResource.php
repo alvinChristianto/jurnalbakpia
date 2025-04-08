@@ -9,6 +9,7 @@ use App\Models\BakpiaTransaction;
 use Carbon\Carbon;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -209,11 +210,36 @@ class BakpiaTransactionResource extends Resource
                 Tables\Columns\TextColumn::make('total_price')->numeric(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
-                    ->options([
-                        'PAID' => 'PAID',
-                        'REFUND' => 'REFUND',
-                    ]),
+                // Tables\Filters\SelectFilter::make('status')
+                //     ->options([
+                //         'PAID' => 'PAID',
+                //         'REFUND' => 'REFUND',
+                //     ]),
+
+                Tables\Filters\Filter::make('created_at')
+                    ->form([
+                        DatePicker::make('created_from'),
+                        DatePicker::make('created_until'),
+                    ])
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['created_from'] && !$data['created_until']) {
+                            return null;
+                        }
+                        $indicatorFrom = 'Created from ' . Carbon::parse($data['created_from'])->toFormattedDateString();
+                        $indicatorUntil = ' to ' . Carbon::parse($data['created_until'])->toFormattedDateString();
+                        return $indicatorFrom . " " . $indicatorUntil;
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['created_from'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['created_until'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                            );
+                    }),
                 Tables\Filters\SelectFilter::make('id_payment')
                     ->label('Payment')
                     ->relationship('payment', 'name'),
