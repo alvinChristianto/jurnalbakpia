@@ -47,7 +47,10 @@ class OutletResource extends Resource
     {
         return $table
             ->columns([
-                //
+                Tables\Columns\TextColumn::make('name')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('address'),
+                Tables\Columns\TextColumn::make('phone_number'),
             ])
             ->filters([
                 //

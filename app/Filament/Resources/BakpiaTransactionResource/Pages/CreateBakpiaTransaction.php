@@ -24,7 +24,7 @@ class CreateBakpiaTransaction extends CreateRecord
         $randomDigits = str_pad(random_int(100, 999), 3, '0', STR_PAD_LEFT);
 
         $transformId = "BAK_" . $day . $month . $year . $randomDigits;
-        $data['id'] = $transformId;
+        $data['id_transaction'] = $transformId;
 
         return $data;
     }
