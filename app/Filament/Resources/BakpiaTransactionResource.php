@@ -18,10 +18,14 @@ use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Log;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Columns\Column;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class BakpiaTransactionResource extends Resource
 {
@@ -207,7 +211,9 @@ class BakpiaTransactionResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('customer.name'),
                 Tables\Columns\TextColumn::make('payment.name'),
-                Tables\Columns\TextColumn::make('total_price')->numeric(),
+                Tables\Columns\TextColumn::make('total_price')
+                    ->numeric()
+                    ->summarize(Sum::make()),
             ])
             ->filters([
                 // Tables\Filters\SelectFilter::make('status')
@@ -254,6 +260,14 @@ class BakpiaTransactionResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    ExportBulkAction::make()->exports([
+                        ExcelExport::make()->withColumns([
+                            Column::make('id_transaction'),
+                            Column::make('type'),
+                            Column::make('outlet.name'),
+                            Column::make('customer.name'),
+                        ]),
+                    ]),
                 ]),
             ]);
     }
