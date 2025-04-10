@@ -24,8 +24,8 @@ class BakpiaSeeder extends Seeder
             ],
             [
                 'name' => 'Bakpia Abon',
-                'price_8' => '25000',
-                'price_18' => '50000',
+                'price_8' => '20000',
+                'price_18' => '40000',
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],

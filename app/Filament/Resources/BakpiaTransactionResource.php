@@ -19,6 +19,7 @@ use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\Summarizers\Sum;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -207,52 +208,60 @@ class BakpiaTransactionResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('id_transaction')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('tgl transaksi'),
                 Tables\Columns\TextColumn::make('outlet.name')
+                    ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('customer.name'),
-                Tables\Columns\TextColumn::make('payment.name'),
+                Tables\Columns\TextColumn::make('customer.name')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('payment.name')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('total_price')
                     ->numeric()
                     ->summarize(Sum::make()),
             ])
-            ->filters([
-                // Tables\Filters\SelectFilter::make('status')
-                //     ->options([
-                //         'PAID' => 'PAID',
-                //         'REFUND' => 'REFUND',
-                //     ]),
+            ->filters(
+                [
+                    // Tables\Filters\SelectFilter::make('status')
+                    //     ->options([
+                    //         'PAID' => 'PAID',
+                    //         'REFUND' => 'REFUND',
+                    //     ]),
 
-                Tables\Filters\Filter::make('created_at')
-                    ->form([
-                        DatePicker::make('created_from'),
-                        DatePicker::make('created_until'),
-                    ])
-                    ->indicateUsing(function (array $data): ?string {
-                        if (!$data['created_from'] && !$data['created_until']) {
-                            return null;
-                        }
-                        $indicatorFrom = 'Created from ' . Carbon::parse($data['created_from'])->toFormattedDateString();
-                        $indicatorUntil = ' to ' . Carbon::parse($data['created_until'])->toFormattedDateString();
-                        return $indicatorFrom . " " . $indicatorUntil;
-                    })
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query
-                            ->when(
-                                $data['created_from'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
-                            )
-                            ->when(
-                                $data['created_until'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
-                            );
-                    }),
-                Tables\Filters\SelectFilter::make('id_payment')
-                    ->label('Payment')
-                    ->relationship('payment', 'name'),
-                Tables\Filters\SelectFilter::make('id_outlet')
-                    ->label('Outlet')
-                    ->relationship('outlet', 'name')
-            ])
+                    Tables\Filters\Filter::make('created_at')
+                        ->form([
+                            DatePicker::make('created_from'),
+                            DatePicker::make('created_until'),
+                        ])
+                        ->indicateUsing(function (array $data): ?string {
+                            if (!$data['created_from'] && !$data['created_until']) {
+                                return null;
+                            }
+                            $indicatorFrom = 'Created from ' . Carbon::parse($data['created_from'])->toFormattedDateString();
+                            $indicatorUntil = ' to ' . Carbon::parse($data['created_until'])->toFormattedDateString();
+                            return $indicatorFrom . " " . $indicatorUntil;
+                        })
+                        ->query(function (Builder $query, array $data): Builder {
+                            return $query
+                                ->when(
+                                    $data['created_from'],
+                                    fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                                )
+                                ->when(
+                                    $data['created_until'],
+                                    fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                                );
+                        }),
+                    Tables\Filters\SelectFilter::make('id_payment')
+                        ->label('Payment')
+                        ->relationship('payment', 'name'),
+                    Tables\Filters\SelectFilter::make('id_outlet')
+                        ->label('Outlet')
+                        ->relationship('outlet', 'name')
+                ],
+                layout: FiltersLayout::AboveContentCollapsible
+            )
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
@@ -263,13 +272,17 @@ class BakpiaTransactionResource extends Resource
                     ExportBulkAction::make()->exports([
                         ExcelExport::make()->withColumns([
                             Column::make('id_transaction'),
-                            Column::make('type'),
+                            Column::make('created_at'),
+                            Column::make('status'),
                             Column::make('outlet.name'),
                             Column::make('customer.name'),
+                            Column::make('payment.name'),
+                            Column::make('total_price'),
                         ]),
                     ]),
                 ]),
-            ]);
+            ])
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getRelations(): array

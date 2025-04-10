@@ -18,12 +18,10 @@ class DatabaseSeeder extends Seeder
         $this->call([
             PaymentSeeder::class,
             OutletSeeder::class,
-            BakpiaSeeder::class
+            BakpiaSeeder::class,
+            CustomerSeeder::class,
+            BakpiaTransactionSeeder::class
         ]);
 
-        User::factory()->create([
-            'name' => 'admin',
-            'email' => 'admin@gmail.com',
-        ]);
     }
 }
