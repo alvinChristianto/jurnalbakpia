@@ -1,0 +1,110 @@
+[
+    {
+        "id_transaction": "BAK_20250101001",
+        "id_Customer": "1",
+        "id_payment": "1",
+        "id_outlet": "OUTLET_1",
+        "transaction_detail": "[{\"amount\": \"2\", \"id_bakpia\": \"1\", \"price_per\": 40000, \"box_varian\": \"8\"}]",
+        "total_price": "40000",
+        "discount": "0",
+        "status": "PAID",
+        "created_at": "2025-03-28 10:00:00",
+        "updated_at": "2025-03-28 10:00:00"
+    },
+    {
+        "id_transaction": "BAK_20250101002",
+        "id_Customer": "2",
+        "id_payment": "1",
+        "id_outlet": "OUTLET_1",
+        "transaction_detail": "[{\"amount\": \"3\", \"id_bakpia\": \"1\", \"price_per\": 60000, \"box_varian\": \"8\"}]",
+        "total_price": "60000",
+        "discount": "0",
+        "status": "PAID",
+        "created_at": "2025-03-28 10:00:00",
+        "updated_at": "2025-03-28 10:00:00"
+    },
+    {
+        "id_transaction": "BAK_20250101003",
+        "id_Customer": "1",
+        "id_payment": "1",
+        "id_outlet": "OUTLET_1",
+        "transaction_detail": "[{\"amount\": \"3\", \"id_bakpia\": \"1\", \"price_per\": 60000, \"box_varian\": \"8\"}]",
+        "total_price": "60000",
+        "discount": "0",
+        "status": "PAID",
+        "created_at": "2025-03-29 10:00:00",
+        "updated_at": "2025-03-29 10:00:00"
+    },
+    {
+        "id_transaction": "BAK_20250101004",
+        "id_Customer": "2",
+        "id_payment": "1",
+        "id_outlet": "OUTLET_1",
+        "transaction_detail": "[{\"amount\": \"30\", \"id_bakpia\": \"3\", \"price_per\": 600000, \"box_varian\": \"8\"}]",
+        "total_price": "600000",
+        "discount": "0",
+        "status": "PAID",
+        "created_at": "2025-03-29 10:00:00",
+        "updated_at": "2025-03-29 10:00:00"
+    },
+    {
+        "id_transaction": "BAK_20250101005",
+        "id_Customer": "2",
+        "id_payment": "2",
+        "id_outlet": "OUTLET_2",
+        "transaction_detail": "[{\"amount\": \"20\", \"id_bakpia\": \"2\", \"price_per\": 400000, \"box_varian\": \"8\"}]",
+        "total_price": "400000",
+        "discount": "0",
+        "status": "PAID",
+        "created_at": "2025-03-29 10:00:00",
+        "updated_at": "2025-03-29 10:00:00"
+    },
+    {
+        "id_transaction": "BAK_20250101006",
+        "id_Customer": "2",
+        "id_payment": "3",
+        "id_outlet": "OUTLET_3",
+        "transaction_detail": "[{\"amount\": \"20\", \"id_bakpia\": \"2\", \"price_per\": 400000, \"box_varian\": \"8\"}]",
+        "total_price": "400000",
+        "discount": "0",
+        "status": "PAID",
+        "created_at": "2025-03-29 10:00:00",
+        "updated_at": "2025-03-29 10:00:00"
+    },
+    {
+        "id_transaction": "BAK_20250101007",
+        "id_Customer": "2",
+        "id_payment": "2",
+        "id_outlet": "OUTLET_1",
+        "transaction_detail": "[{\"amount\": \"10\", \"id_bakpia\": \"2\", \"price_per\": 200000, \"box_varian\": \"8\"}]",
+        "total_price": "200000",
+        "discount": "0",
+        "status": "PAID",
+        "created_at": "2025-03-31 10:00:00",
+        "updated_at": "2025-03-31 10:00:00"
+    },
+    {
+        "id_transaction": "BAK_20250101008",
+        "id_Customer": "3",
+        "id_payment": "3",
+        "id_outlet": "OUTLET_2",
+        "transaction_detail": "[{\"amount\": \"1\", \"id_bakpia\": \"2\", \"price_per\": 20000, \"box_varian\": \"8\"}]",
+        "total_price": "20000",
+        "discount": "0",
+        "status": "PAID",
+        "created_at": "2025-03-31 10:00:00",
+        "updated_at": "2025-03-31 10:00:00"
+    },
+    {
+        "id_transaction": "BAK_20250101009",
+        "id_Customer": "2",
+        "id_payment": "3",
+        "id_outlet": "OUTLET_2",
+        "transaction_detail": "[{\"amount\": \"5\", \"id_bakpia\": \"2\", \"price_per\": 100000, \"box_varian\": \"8\"}]",
+        "total_price": "100000",
+        "discount": "0",
+        "status": "PAID",
+        "created_at": "2025-03-31 10:00:00",
+        "updated_at": "2025-03-31 10:00:00"
+    }
+]
