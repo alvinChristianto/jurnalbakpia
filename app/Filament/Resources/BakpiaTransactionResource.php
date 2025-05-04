@@ -6,6 +6,7 @@ use App\Filament\Resources\BakpiaTransactionResource\Pages;
 use App\Filament\Resources\BakpiaTransactionResource\RelationManagers;
 use App\Models\Bakpia;
 use App\Models\BakpiaTransaction;
+use App\Models\Outlet;
 use Carbon\Carbon;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms;
@@ -27,6 +28,7 @@ use Illuminate\Support\Facades\Log;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Columns\Column;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
+use Illuminate\Support\Facades\Auth;
 
 class BakpiaTransactionResource extends Resource
 {
@@ -74,7 +76,21 @@ class BakpiaTransactionResource extends Resource
         return $form
             ->schema([
                 Select::make('id_outlet')
-                    ->relationship('outlet', 'name')
+                    ->options(function () {
+                        $userOutlets = Auth::user()->outlets; // Get the authenticated user
+                        // dd($userOutlets);
+
+                        $roleOutlets = []; // Use collect for easier manipulation
+
+                        foreach ($userOutlets as $ids) {
+                            $outletName = Outlet::all()->where('id_outlet', $ids)->pluck('name');
+                            // array_push($roleOutlets, $outletName[0]);
+                            $roleOutlets[$ids] = $outletName[0];
+                        }
+                        // dd($roleOutlets);
+                        return $roleOutlets;
+                    })
+
                     ->columnSpan('full')
                     ->required(),
                 Fieldset::make('Data Barang')
