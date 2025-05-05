@@ -16,4 +16,14 @@ class Bakpia extends Model
     // {
     //     return $this->belongsTo(User::class);
     // }
+
+    public function bakpiaProduction(): HasMany
+    {
+        return $this->hasMany(BakpiaProduction::class, 'id');
+    }
+    
+    public function bakpiaShipment(): HasMany
+    {
+        return $this->hasMany(BakpiaShipment::class, 'id');
+    }
 }
