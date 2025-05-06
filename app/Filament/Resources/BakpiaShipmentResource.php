@@ -4,9 +4,12 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\BakpiaShipmentResource\Pages;
 use App\Filament\Resources\BakpiaShipmentResource\RelationManagers;
+use App\Models\Bakpia;
 use App\Models\BakpiaShipment;
+use App\Models\Outlet;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -23,21 +26,28 @@ class BakpiaShipmentResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('id_bakpia')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('id_outlet')
-                    ->required()
-                    ->maxLength(36),
-                Forms\Components\TextInput::make('status')
+                Forms\Components\Select::make('id_bakpia')
+                    ->options(function (Get $get) {
+                        return Bakpia::pluck('name', 'id');
+                    })
                     ->required(),
-                Forms\Components\TextInput::make('box_type')
+                Forms\Components\Select::make('id_outlet')
+                    ->label('outlet tujuan')
+                    ->options(function (Get $get) {
+                        return Outlet::pluck('name', 'id_outlet');
+                    })
+
                     ->required(),
+                Forms\Components\Select::make('box_varian')
+                    ->options([
+                        'box_8' => 'isi 8',
+                        'box_18' => 'isi 18',
+                    ]),
+
                 Forms\Components\TextInput::make('amount')
                     ->required()
                     ->numeric(),
-                Forms\Components\Textarea::make('description')
-                    ->columnSpanFull(),
+                Forms\Components\Textarea::make('description'),
                 Forms\Components\DateTimePicker::make('shipment_date')
                     ->required(),
             ]);
@@ -47,13 +57,12 @@ class BakpiaShipmentResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id_bakpia')
-                    ->numeric()
+                Tables\Columns\TextColumn::make('bakpia.name')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('id_outlet')
-                    ->searchable(),
+                Tables\Columns\TextColumn::make('outlet.name')
+                    ->label('outlet tujuan'),
                 Tables\Columns\TextColumn::make('status'),
-                Tables\Columns\TextColumn::make('box_type'),
+                Tables\Columns\TextColumn::make('box_varian'),
                 Tables\Columns\TextColumn::make('amount')
                     ->numeric()
                     ->sortable(),

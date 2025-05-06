@@ -28,6 +28,11 @@ class Outlet extends Model
         return $this->hasMany(BakpiaTransaction::class, 'id');
     }
 
+    public function bakpiaShipment(): HasMany
+    {
+        return $this->hasMany(BakpiaShipment::class, 'id');
+    }
+
     // public function user(): BelongsTo
     // {
     //     return $this->belongsTo(User::class);

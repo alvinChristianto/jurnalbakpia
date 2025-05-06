@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignUuid('id_outlet')->references('id_outlet')->on('outlets'); 
 
             $table->enum('status', ['SENT', 'RETURNED']);
-            $table->enum('box_type', ['box_8', 'box_18']);
+            $table->enum('box_varian', ['box_8', 'box_18']);
             $table->integer('amount');
             $table->text('description')->nullable();
             $table->dateTime('shipment_date');

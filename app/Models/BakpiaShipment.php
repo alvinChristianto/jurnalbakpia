@@ -9,6 +9,12 @@ class BakpiaShipment extends Model
 {
     public function bakpia(): BelongsTo
     {
-        return $this->belongsTo(bakpia::class, 'id');
+        return $this->belongsTo(Bakpia::class, 'id');
+    }
+
+    public function outlet(): BelongsTo
+    {
+        return $this->belongsTo(Outlet::class, 'id_outlet', 'id_outlet');
+        // return $this->belongsTo(Outlet::class, 'id');
     }
 }

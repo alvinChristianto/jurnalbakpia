@@ -4,9 +4,11 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\BakpiaProductionResource\Pages;
 use App\Filament\Resources\BakpiaProductionResource\RelationManagers;
+use App\Models\Bakpia;
 use App\Models\BakpiaProduction;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -23,16 +25,15 @@ class BakpiaProductionResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('id_bakpia')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('production_status')
+                Forms\Components\Select::make('id_bakpia')
+                    ->options(function (Get $get) {
+                        return Bakpia::pluck('name', 'id');
+                    })
                     ->required(),
                 Forms\Components\TextInput::make('amount')
                     ->required()
                     ->numeric(),
-                Forms\Components\Textarea::make('description')
-                    ->columnSpanFull(),
+                Forms\Components\Textarea::make('description'),
                 Forms\Components\DateTimePicker::make('production_date')
                     ->required(),
             ]);
@@ -45,12 +46,12 @@ class BakpiaProductionResource extends Resource
                 Tables\Columns\TextColumn::make('id_bakpia')
                     ->numeric()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('production_date')
+                    ->dateTime()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('production_status'),
                 Tables\Columns\TextColumn::make('amount')
                     ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('production_date')
-                    ->dateTime()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
