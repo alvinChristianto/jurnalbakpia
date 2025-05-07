@@ -43,13 +43,12 @@ class BakpiaProductionResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id_bakpia')
-                    ->numeric()
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('bakpia.name'),
                 Tables\Columns\TextColumn::make('production_date')
                     ->dateTime()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('production_status'),
+                Tables\Columns\TextColumn::make('production_status')
+                    ->badge(),
                 Tables\Columns\TextColumn::make('amount')
                     ->numeric()
                     ->sortable(),
@@ -67,6 +66,7 @@ class BakpiaProductionResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

@@ -77,18 +77,26 @@ class BakpiaTransactionResource extends Resource
             ->schema([
                 Select::make('id_outlet')
                     ->options(function () {
-                        $userOutlets = Auth::user()->outlets; // Get the authenticated user
-                        // dd($userOutlets);
+                        /**if user login with email on adminEmail, then show all list outlet */
+                        $adminEmail = ['admin@gmail.com'];
 
-                        $roleOutlets = []; // Use collect for easier manipulation
+                        if (in_array(Auth::user()->email, $adminEmail, true)) {
+                            $outletName = Outlet::all()->pluck('name');
+                            return $outletName;
+                        } else {
 
-                        foreach ($userOutlets as $ids) {
-                            $outletName = Outlet::all()->where('id_outlet', $ids)->pluck('name');
-                            // array_push($roleOutlets, $outletName[0]);
-                            $roleOutlets[$ids] = $outletName[0];
+                            $userOutlets = Auth::user()->outlets; // Get the authenticated user
+
+                            $roleOutlets = []; // Use collect for easier manipulation
+
+                            foreach ($userOutlets as $ids) {
+                                $outletName = Outlet::all()->where('id_outlet', $ids)->pluck('name');
+                                // array_push($roleOutlets, $outletName[0]);
+                                $roleOutlets[$ids] = $outletName[0];
+                            }
+                            // dd($roleOutlets);
+                            return $roleOutlets;
                         }
-                        // dd($roleOutlets);
-                        return $roleOutlets;
                     })
 
                     ->columnSpan('full')

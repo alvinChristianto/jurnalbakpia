@@ -38,7 +38,8 @@ class UserResource extends Resource
                     ->dehydrated(fn (?string $state): bool => filled($state))
                     ->required(fn (Page $livewire): bool => $livewire instanceof CreateRecord),
                 // Forms\Components\Select::make('roles')->multiple()->relationship('roles', 'name')
-
+                Forms\Components\Select::make('roles')->multiple()->relationship('roles', 'name'),
+          
                 Forms\Components\Select::make('outlets')
                     ->multiple()
                     ->options(Outlet::all()->pluck('name', 'id_outlet'))
@@ -53,12 +54,14 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('email'),
+                Tables\Columns\TextColumn::make('roles.name'),
                 Tables\Columns\TextColumn::make('outlets')->badge(),
             ])
             ->filters([
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([

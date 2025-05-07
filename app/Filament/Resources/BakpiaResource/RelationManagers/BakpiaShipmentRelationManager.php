@@ -29,7 +29,19 @@ class BakpiaShipmentRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('bakpia_delivery')
             ->columns([
-                Tables\Columns\TextColumn::make('bakpia_delivery'),
+                Tables\Columns\TextColumn::make('bakpia.name')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('outlet.name')
+                    ->label('outlet tujuan'),
+                Tables\Columns\TextColumn::make('status')
+                    ->badge(),
+                Tables\Columns\TextColumn::make('box_varian'),
+                Tables\Columns\TextColumn::make('amount')
+                    ->numeric()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('shipment_date')
+                    ->dateTime()
+                    ->sortable(),
             ])
             ->filters([
                 //
