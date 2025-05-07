@@ -68,7 +68,7 @@ class OutletResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\BakpiaShipmentRelationManager::class,
         ];
     }
 

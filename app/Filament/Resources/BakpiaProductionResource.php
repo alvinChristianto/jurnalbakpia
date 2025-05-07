@@ -43,6 +43,7 @@ class BakpiaProductionResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id'),
                 Tables\Columns\TextColumn::make('bakpia.name'),
                 Tables\Columns\TextColumn::make('production_date')
                     ->dateTime()
@@ -89,5 +90,9 @@ class BakpiaProductionResource extends Resource
             'create' => Pages\CreateBakpiaProduction::route('/create'),
             'edit' => Pages\EditBakpiaProduction::route('/{record}/edit'),
         ];
+    }
+    protected function getRedirectUrl(): string
+    {
+        return '/'; // Or route('filament.pages.dashboard') if you want to go to the dashboard
     }
 }

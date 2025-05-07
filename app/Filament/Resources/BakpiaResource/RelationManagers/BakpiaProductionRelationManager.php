@@ -29,7 +29,8 @@ class BakpiaProductionRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('bakpia_production')
             ->columns([
-                
+                Tables\Columns\TextColumn::make('bakpia.name')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('production_date')
                     ->dateTime()
                     ->sortable(),

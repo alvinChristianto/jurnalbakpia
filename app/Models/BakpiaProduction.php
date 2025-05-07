@@ -9,6 +9,6 @@ class BakpiaProduction extends Model
 {
     public function bakpia(): BelongsTo
     {
-        return $this->belongsTo(Bakpia::class, 'id');
+        return $this->belongsTo(Bakpia::class, 'id_bakpia');
     }
 }

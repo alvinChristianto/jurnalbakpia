@@ -9,7 +9,7 @@ class BakpiaShipment extends Model
 {
     public function bakpia(): BelongsTo
     {
-        return $this->belongsTo(Bakpia::class, 'id');
+        return $this->belongsTo(Bakpia::class, 'id_bakpia');
     }
 
     public function outlet(): BelongsTo

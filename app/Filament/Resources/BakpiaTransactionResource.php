@@ -324,4 +324,8 @@ class BakpiaTransactionResource extends Resource
             'edit' => Pages\EditBakpiaTransaction::route('/{record}/edit'),
         ];
     }
+    protected function getRedirectUrl(): string
+    {
+        return '/'; // Or route('filament.pages.dashboard') if you want to go to the dashboard
+    }
 }

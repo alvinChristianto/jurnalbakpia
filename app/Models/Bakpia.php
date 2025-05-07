@@ -19,11 +19,11 @@ class Bakpia extends Model
 
     public function bakpiaProduction(): HasMany
     {
-        return $this->hasMany(BakpiaProduction::class, 'id');
+        return $this->hasMany(BakpiaProduction::class, 'id_bakpia');
     }
     
     public function bakpiaShipment(): HasMany
     {
-        return $this->hasMany(BakpiaShipment::class, 'id');
+        return $this->hasMany(BakpiaShipment::class, 'id_bakpia');
     }
 }
