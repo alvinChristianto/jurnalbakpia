@@ -1,0 +1,88 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\BakpiaStockResource\Pages;
+use App\Filament\Resources\BakpiaStockResource\RelationManagers;
+use App\Models\BakpiaStock;
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+
+class BakpiaStockResource extends Resource
+{
+    protected static ?string $model = BakpiaStock::class;
+
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'STOCK_IN' => 'info',
+                        'STOCK_SOLD' => 'success',
+                        'RETURNED' => 'danger',
+                    }),
+                Tables\Columns\TextColumn::make('bakpia.name')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('outlet.name')
+                    ->label('outlet tujuan'),
+                Tables\Columns\TextColumn::make('box_varian'),
+                Tables\Columns\TextColumn::make('amount')
+                    ->numeric()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('stock_record_date')
+                    ->dateTime()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                //
+            ])
+            ->actions([
+                // Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListBakpiaStocks::route('/'),
+            'create' => Pages\CreateBakpiaStock::route('/create'),
+            'edit' => Pages\EditBakpiaStock::route('/{record}/edit'),
+        ];
+    }
+}

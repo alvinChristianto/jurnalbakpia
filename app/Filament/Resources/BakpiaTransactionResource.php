@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\BakpiaTransactionResource\Pages;
 use App\Filament\Resources\BakpiaTransactionResource\RelationManagers;
 use App\Models\Bakpia;
+use App\Models\BakpiaStock;
 use App\Models\BakpiaTransaction;
 use App\Models\Outlet;
 use Carbon\Carbon;
@@ -17,6 +18,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\Summarizers\Sum;
@@ -38,10 +40,43 @@ class BakpiaTransactionResource extends Resource
 
     public static function form(Form $form): Form
     {
-        function calculatePricePer($idBakpiaPer, $boxVarianPer, $amountPer)
+        function calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer)
         {
 
             $price = 0;
+            $stockFromGudang = BakpiaStock::all()
+                ->where('id_outlet', $idOutlet)
+                ->where('id_bakpia', $idBakpiaPer)
+                ->where('status', 'STOCK_IN')
+                ->sum('amount');
+
+            $stockSold = BakpiaStock::all()
+                ->where('id_outlet', $idOutlet)
+                ->where('id_bakpia', $idBakpiaPer)
+                ->where('status', 'STOCK_SOLD')
+                ->sum('amount');
+
+            $stockReturned = BakpiaStock::all()
+                ->where('id_outlet', $idOutlet)
+                ->where('id_bakpia', $idBakpiaPer)
+                ->where('status', 'RETURNED')
+                ->sum('amount');
+
+            $totalStock = $stockFromGudang + $stockSold + $stockReturned;
+            $checkStockBakpia = $totalStock - $amountPer;
+
+            Log::info($checkStockBakpia);
+            if ($checkStockBakpia < 0) {
+                Notification::make()
+                    ->title('Error') // Set the title of the notification
+                    ->body('No Bakpia Stock left | '.$checkStockBakpia) // Set the body of the notification
+                    ->danger() // Set the type to danger (for error)
+                    ->send(); // Send the notification
+
+                // throw new \Exception('Record creation failed due to no bakpia stock left');
+
+                return [0, $totalStock, $checkStockBakpia];
+            }
 
             if ($boxVarianPer == 8) {
                 $price = Bakpia::where('id', $idBakpiaPer)->value('price_8');
@@ -52,7 +87,7 @@ class BakpiaTransactionResource extends Resource
             $price = $price * $amountPer;
             // Log::info($price);
 
-            return $price;
+            return [$price, $totalStock, $checkStockBakpia];
         }
 
         function calculatePrice($transactDetail)
@@ -81,7 +116,8 @@ class BakpiaTransactionResource extends Resource
                         $adminEmail = ['admin@gmail.com'];
 
                         if (in_array(Auth::user()->email, $adminEmail, true)) {
-                            $outletName = Outlet::all()->pluck('name');
+                            $outletName = Outlet::all()->pluck('name', 'id_outlet');
+                            // dd($outletName);
                             return $outletName;
                         } else {
 
@@ -120,7 +156,7 @@ class BakpiaTransactionResource extends Resource
                                 Forms\Components\TextInput::make('amount')
                                     ->integer(),
                                 Forms\Components\TextInput::make('price_per')
-                                    ->numeric()
+                                    // ->numeric()
                                     // ->disabled()
                                     ->dehydrated(true)
                                     ->reactive()
@@ -131,12 +167,25 @@ class BakpiaTransactionResource extends Resource
                                                 $amountPer = $get('amount');
                                                 $boxVarianPer = $get('box_varian');
                                                 $idBakpiaPer = $get('id_bakpia');
+                                                $idOutlet = $get('../../id_outlet');
 
-                                                $priceTotlPer =  calculatePricePer($idBakpiaPer, $boxVarianPer, $amountPer);
-                                                Log::info($priceTotlPer);
-                                                $set('price_per', $priceTotlPer);
+                                                $res =  calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer);
+
+                                                $set('price_per', $res[0]);
+
+                                                $set('stock_latest', $res[1]);
+
+                                                $set('stock_after_sold', $res[2]);
                                             })
-                                    )
+                                    ),
+
+                                Forms\Components\TextInput::make('stock_latest')
+                                    ->integer()
+                                    ->disabled(),
+
+                                Forms\Components\TextInput::make('stock_after_sold')
+                                    ->integer()
+                                    ->disabled(),
 
 
 
@@ -307,6 +356,18 @@ class BakpiaTransactionResource extends Resource
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
+    }
+
+    public static function mutateFormDataBeforeCreate(array $data): array
+    {
+        dd('test');
+        Notification::make()
+            ->title('Error') // Set the title of the notification
+            ->body('Something went wrong. Record not created.') // Set the body of the notification
+            ->danger() // Set the type to danger (for error)
+            ->send(); // Send the notification
+
+        throw new \Exception('Record creation failed due to the specified condition.');
     }
 
     public static function getRelations(): array

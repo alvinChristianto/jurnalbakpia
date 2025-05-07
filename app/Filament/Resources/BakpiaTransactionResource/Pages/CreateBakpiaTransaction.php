@@ -3,15 +3,17 @@
 namespace App\Filament\Resources\BakpiaTransactionResource\Pages;
 
 use App\Filament\Resources\BakpiaTransactionResource;
+use App\Models\BakpiaStock;
 use Carbon\Carbon;
 use Filament\Actions;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateBakpiaTransaction extends CreateRecord
 {
     protected static string $resource = BakpiaTransactionResource::class;
 
-    
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $now = Carbon::now();
@@ -25,8 +27,54 @@ class CreateBakpiaTransaction extends CreateRecord
 
         $transformId = "BAK_" . $year . $month . $day . $randomDigits;
         $data['id_transaction'] = $transformId;
-        // dd($data);
-        return $data;
+        foreach ($data['transaction_detail'] as $item) {
+
+            $item['box_varian'] = ($item['box_varian'] == '8') ? 'box_8' : (($item['box_varian'] == '18') ? 'box_18' : $item['box_varian']);
+
+            $stockFromGudang = BakpiaStock::all()
+                ->where('id_outlet', $data['id_outlet'])
+                ->where('id_bakpia', $item["id_bakpia"])
+                ->where('status', 'STOCK_IN')
+                ->sum('amount');
+
+            $stockSold = BakpiaStock::all()
+                ->where('id_outlet', $data['id_outlet'])
+                ->where('id_bakpia', $item["id_bakpia"])
+                ->where('status', 'STOCK_SOLD')
+                ->sum('amount');
+
+            $stockReturned = BakpiaStock::all()
+                ->where('id_outlet', $data['id_outlet'])
+                ->where('id_bakpia', $item["id_bakpia"])
+                ->where('status', 'RETURNED')
+                ->sum('amount');
+
+            $totalStock = $stockFromGudang + $stockSold + $stockReturned;
+            $checkStockBakpia = $totalStock - $item["amount"];
+
+            if ($checkStockBakpia > 0) {
+                BakpiaStock::create([
+                    'id_outlet' => $data['id_outlet'],
+                    'id_bakpia' => $item["id_bakpia"],
+                    'id_transaction' => $data['id_transaction'],
+                    'box_varian' =>  $item["box_varian"],
+                    'amount' => $item["amount"],
+                    'status' => 'STOCK_SOLD',
+                    'stock_record_date' => $now,
+                ]);
+
+
+                return $data;
+            } else {
+                //failed
+            }
+            //         DB::table('transactions')
+            // ->join('categories', 'transactions.category_id', '=', 'categories.id')
+            // ->where('categories.kind', '=', 1)
+            // ->sum('transactions.amount')
+
+
+        }
     }
     protected function getRedirectUrl(): string
     {

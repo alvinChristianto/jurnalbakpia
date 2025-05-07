@@ -26,4 +26,10 @@ class Bakpia extends Model
     {
         return $this->hasMany(BakpiaShipment::class, 'id_bakpia');
     }
+    
+    public function bakpiaStock(): HasMany
+    {
+        return $this->hasMany(BakpiaStock::class, 'id_bakpia');
+    }
+
 }
