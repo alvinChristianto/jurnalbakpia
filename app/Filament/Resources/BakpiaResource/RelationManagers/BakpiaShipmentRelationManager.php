@@ -44,7 +44,18 @@ class BakpiaShipmentRelationManager extends RelationManager
                     ->sortable(),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('status pengiriman')
+                    ->options([
+                        'SENT' => 'SENT',
+                        'RETURNED' => 'RETURNED',
+                    ]),
+                Tables\Filters\SelectFilter::make('box_varian')
+                    ->label('jenis box')
+                    ->options([
+                        'box_8' => 'box_8',
+                        'box_18' => 'box_18',
+                    ]),
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make(),
