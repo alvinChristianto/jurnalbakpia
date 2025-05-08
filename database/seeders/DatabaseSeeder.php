@@ -20,8 +20,10 @@ class DatabaseSeeder extends Seeder
             OutletSeeder::class,
             BakpiaSeeder::class,
             CustomerSeeder::class,
-            BakpiaTransactionSeeder::class
+            BakpiaTransactionSeeder::class,
+            BakpiaProductionSeeder::class,
+            BakpiaStockSeeder::class,
+            BakpiaShipmentSeeder::class
         ]);
-
     }
 }

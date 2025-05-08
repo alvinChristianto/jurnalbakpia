@@ -200,6 +200,7 @@ class BakpiaTransactionResource extends Resource
                             ->disabled()
                             ->dehydrated(true)
                             ->reactive()
+                            ->required()
                             ->suffixAction(
                                 Action::make('copyCostToPrice')
                                     ->icon('heroicon-m-calculator')

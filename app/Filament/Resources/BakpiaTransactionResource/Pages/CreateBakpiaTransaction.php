@@ -62,9 +62,6 @@ class CreateBakpiaTransaction extends CreateRecord
                     'status' => 'STOCK_SOLD',
                     'stock_record_date' => $now,
                 ]);
-
-
-                return $data;
             } else {
                 //failed
             }
@@ -75,6 +72,8 @@ class CreateBakpiaTransaction extends CreateRecord
 
 
         }
+
+        return $data;
     }
     protected function getRedirectUrl(): string
     {
