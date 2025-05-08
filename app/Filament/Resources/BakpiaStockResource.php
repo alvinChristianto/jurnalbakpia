@@ -57,7 +57,22 @@ class BakpiaStockResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('status stock')
+                    ->options([
+                        'STOCK_IN' => 'STOCK_IN',
+                        'STOCK_SOLD' => 'STOCK_SOLD',
+                        'RETURNED' => 'RETURNED',
+                    ]),
+                Tables\Filters\SelectFilter::make('box_varian')
+                    ->label('jenis box')
+                    ->options([
+                        'box_8' => 'box_8',
+                        'box_18' => 'box_18',
+                    ]),
+                Tables\Filters\SelectFilter::make('id_outlet')
+                    ->label('Outlet')
+                    ->relationship('outlet', 'name')
             ])
             ->actions([
                 // Tables\Actions\EditAction::make(),

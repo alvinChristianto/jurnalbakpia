@@ -62,7 +62,8 @@ class BakpiaShipmentResource extends Resource
                 Tables\Columns\TextColumn::make('outlet.name')
                     ->label('outlet tujuan'),
                 Tables\Columns\TextColumn::make('status'),
-                Tables\Columns\TextColumn::make('box_varian'),
+                Tables\Columns\TextColumn::make('box_varian')
+                    ->label('jenis box'),
                 Tables\Columns\TextColumn::make('amount')
                     ->numeric()
                     ->sortable(),
@@ -79,7 +80,18 @@ class BakpiaShipmentResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('status pengiriman')
+                    ->options([
+                        'SENT' => 'SENT',
+                        'RETURNED' => 'RETURNED',
+                    ]),
+                Tables\Filters\SelectFilter::make('box_varian')
+                    ->label('jenis box')
+                    ->options([
+                        'box_8' => 'box_8',
+                        'box_18' => 'box_18',
+                    ]),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
