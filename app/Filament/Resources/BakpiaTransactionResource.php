@@ -69,7 +69,7 @@ class BakpiaTransactionResource extends Resource
             if ($checkStockBakpia < 0) {
                 Notification::make()
                     ->title('Error') // Set the title of the notification
-                    ->body('No Bakpia Stock left | '.$checkStockBakpia) // Set the body of the notification
+                    ->body('No Bakpia Stock left | ' . $checkStockBakpia) // Set the body of the notification
                     ->danger() // Set the type to danger (for error)
                     ->send(); // Send the notification
 
@@ -111,6 +111,7 @@ class BakpiaTransactionResource extends Resource
         return $form
             ->schema([
                 Select::make('id_outlet')
+                    ->label('Nama Outlet')
                     ->options(function () {
                         /**if user login with email on adminEmail, then show all list outlet */
                         $adminEmail = ['admin@gmail.com'];
@@ -137,11 +138,13 @@ class BakpiaTransactionResource extends Resource
 
                     ->columnSpan('full')
                     ->required(),
-                Fieldset::make('Data Barang')
+                Fieldset::make('Data Bakpia')
                     ->schema([
                         Repeater::make('transaction_detail')
+                            ->label('detail bakpia yang dibeli')
                             ->schema([
                                 Forms\Components\Select::make('id_bakpia')
+                                    ->label('jenis bakpia')
                                     ->options(function (Get $get) {
                                         return Bakpia::pluck('name', 'id');
                                     })
@@ -149,13 +152,16 @@ class BakpiaTransactionResource extends Resource
                                     ->required(),
 
                                 Forms\Components\Select::make('box_varian')
+                                    ->label('jenis box')
                                     ->options([
                                         '8' => 'isi 8',
                                         '18' => 'isi 18',
                                     ]),
                                 Forms\Components\TextInput::make('amount')
+                                    ->label('jumlah box')
                                     ->integer(),
                                 Forms\Components\TextInput::make('price_per')
+                                    ->label('harga per box')
                                     // ->numeric()
                                     // ->disabled()
                                     ->dehydrated(true)
@@ -180,10 +186,12 @@ class BakpiaTransactionResource extends Resource
                                     ),
 
                                 Forms\Components\TextInput::make('stock_latest')
+                                    ->label('stock terakhir')
                                     ->integer()
                                     ->disabled(),
 
                                 Forms\Components\TextInput::make('stock_after_sold')
+                                    ->label('stock setelah dijual')
                                     ->integer()
                                     ->disabled(),
 
@@ -196,6 +204,7 @@ class BakpiaTransactionResource extends Resource
                 Fieldset::make('Data Pembayaran')
                     ->schema([
                         Forms\Components\TextInput::make('total_price')
+                            ->label('total harga yang harus dibayar')
                             ->numeric()
                             ->disabled()
                             ->dehydrated(true)
@@ -213,6 +222,7 @@ class BakpiaTransactionResource extends Resource
                                     })
                             ),
                         Forms\Components\Select::make('id_payment')
+                            ->label('metode pembayaran')
                             ->relationship('payment', 'name')
                             ->searchable()
                             ->preload()
@@ -220,6 +230,7 @@ class BakpiaTransactionResource extends Resource
                     ]),
 
                 Select::make('id_customer')
+                    ->label('data pelanggan')
                     ->relationship('customer', 'name')
                     ->searchable()
                     ->createOptionForm([
@@ -281,6 +292,7 @@ class BakpiaTransactionResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('id_transaction')
+                    ->label('id transaksi')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('tgl transaksi'),
@@ -288,10 +300,13 @@ class BakpiaTransactionResource extends Resource
                     ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('customer.name')
+                    ->label('pembeli')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('payment.name')
+                    ->label('metode bayar')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total_price')
+                    ->label('total harga')
                     ->numeric()
                     ->summarize(Sum::make()),
             ])

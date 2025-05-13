@@ -26,12 +26,15 @@ class BakpiaResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
+                    ->label('Nama Varian Bakpia')
                     ->required()
                     ->maxLength(100),
                 Forms\Components\TextInput::make('price_8')
-                    ->numeric(),
+                    ->label('harga box isi 8'),
+                    // ->money('idr'),
                 Forms\Components\TextInput::make('price_18')
-                    ->numeric()
+                    ->label('harga box isi 18')
+                    // ->money('idr')
             ]);
     }
 
@@ -40,16 +43,21 @@ class BakpiaResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Nama Varian Bakpia')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('price_8'),
+                Tables\Columns\TextColumn::make('price_8')
+                    ->label('harga box isi 8')
+                    ->money('idr'),
                 Tables\Columns\TextColumn::make('price_18')
+                    ->label('harga box isi 18')
+                    ->money('idr'),
             ])
             ->filters([
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
                 Tables\Actions\ViewAction::make(),
+                Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

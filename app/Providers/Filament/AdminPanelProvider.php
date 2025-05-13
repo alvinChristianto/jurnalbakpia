@@ -29,7 +29,8 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->brandName('Bakpia 3 Generesi')
-            // ->favicon(asset('logoez.png'))
+            ->favicon(asset('bakpialogo.png'))
+            ->brandLogo(asset('bakpialogo.png'))
             ->login()
             ->font('Roboto')
             ->colors([
