@@ -38,34 +38,42 @@ class BakpiaTransactionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationLabel = 'Transaksi Bakpia';
+    protected static ?string $navigationGroup = 'Transaksi Bakpia ';
+
+    protected static ?string $modelLabel = 'Transaksi Bakpia';
+
     public static function form(Form $form): Form
     {
         function calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer)
         {
-
+            Log::info($boxVarianPer);
             $price = 0;
             $stockFromGudang = BakpiaStock::all()
                 ->where('id_outlet', $idOutlet)
                 ->where('id_bakpia', $idBakpiaPer)
+                ->where('box_varian', $boxVarianPer)
                 ->where('status', 'STOCK_IN')
                 ->sum('amount');
 
             $stockSold = BakpiaStock::all()
                 ->where('id_outlet', $idOutlet)
                 ->where('id_bakpia', $idBakpiaPer)
+                ->where('box_varian', $boxVarianPer)
                 ->where('status', 'STOCK_SOLD')
                 ->sum('amount');
 
             $stockReturned = BakpiaStock::all()
                 ->where('id_outlet', $idOutlet)
                 ->where('id_bakpia', $idBakpiaPer)
+                ->where('box_varian', $boxVarianPer)
                 ->where('status', 'RETURNED')
                 ->sum('amount');
 
-            $totalStock = $stockFromGudang + $stockSold + $stockReturned;
+            $totalStock = $stockFromGudang - $stockSold - $stockReturned;
             $checkStockBakpia = $totalStock - $amountPer;
 
-            Log::info($checkStockBakpia);
+            Log::info($checkStockBakpia . ' | IN ' . $stockFromGudang . ' | SOLD ' . $stockSold . ' | RETN ' . $stockReturned . " || " . $amountPer);
             if ($checkStockBakpia < 0) {
                 Notification::make()
                     ->title('Error') // Set the title of the notification
@@ -78,14 +86,14 @@ class BakpiaTransactionResource extends Resource
                 return [0, $totalStock, $checkStockBakpia];
             }
 
-            if ($boxVarianPer == 8) {
+            if ($boxVarianPer === 'box_8') {
                 $price = Bakpia::where('id', $idBakpiaPer)->value('price_8');
-            } else if ($boxVarianPer == 18) {
+            } else if ($boxVarianPer === 'box_18') {
                 $price = Bakpia::where('id', $idBakpiaPer)->value('price_18');
             }
 
+            Log::info($price);
             $price = $price * $amountPer;
-            // Log::info($price);
 
             return [$price, $totalStock, $checkStockBakpia];
         }
@@ -154,8 +162,8 @@ class BakpiaTransactionResource extends Resource
                                 Forms\Components\Select::make('box_varian')
                                     ->label('jenis box')
                                     ->options([
-                                        '8' => 'isi 8',
-                                        '18' => 'isi 18',
+                                        'box_8' => 'isi 8',
+                                        'box_18' => 'isi 18',
                                     ]),
                                 Forms\Components\TextInput::make('amount')
                                     ->label('jumlah box')

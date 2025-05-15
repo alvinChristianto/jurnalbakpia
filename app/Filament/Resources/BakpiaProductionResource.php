@@ -21,6 +21,10 @@ class BakpiaProductionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationLabel = 'Produksi Bakpia ';
+    protected static ?string $navigationGroup = 'Master Bakpia ';
+
+    protected static ?string $modelLabel = 'Produksi Bakpia';
     public static function form(Form $form): Form
     {
         return $form

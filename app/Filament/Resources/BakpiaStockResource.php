@@ -19,6 +19,11 @@ class BakpiaStockResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationLabel = 'Stok Bakpia';
+    protected static ?string $navigationGroup = 'Master Bakpia ';
+
+    protected static ?string $modelLabel = 'Stok Bakpia';
+
     public static function form(Form $form): Form
     {
         return $form
@@ -72,7 +77,10 @@ class BakpiaStockResource extends Resource
                     ]),
                 Tables\Filters\SelectFilter::make('id_outlet')
                     ->label('Outlet')
-                    ->relationship('outlet', 'name')
+                    ->relationship('outlet', 'name'),
+                Tables\Filters\SelectFilter::make('id_bakpia')
+                    ->label('Jenis Bakpia')
+                    ->relationship('bakpia', 'name')
             ])
             ->actions([
                 // Tables\Actions\EditAction::make(),
