@@ -45,6 +45,31 @@ class BakpiaTransactionResource extends Resource
 
     public static function form(Form $form): Form
     {
+        function dataBakpia($idB, $var)
+        {
+            $idBakpiaPer = $idB;
+            $boxVarianPer = $var;
+
+            // You can now use $selectedPacketId to fetch related data or update other fields.
+            if ($idBakpiaPer) {
+                $sparepart = Bakpia::find($idBakpiaPer);
+                
+                if ($sparepart) {
+                    // Example: Set another TextInput named 'sparepart_price' with the selected sparepart's price
+                    if ($boxVarianPer === 'box_8') {
+                        $prc =  $sparepart->price_8;
+                    } elseif ($boxVarianPer === 'box_18') {
+                        $prc =  $sparepart->price_18;
+                    }
+                    Log::info($sparepart->name);
+                    Log::info($prc);
+                    return [$sparepart->name, $prc];
+                }
+            } else {
+
+                return ["", ""];
+            }
+        }
         function calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer)
         {
             Log::info($boxVarianPer);
@@ -156,7 +181,7 @@ class BakpiaTransactionResource extends Resource
                                     ->options(function (Get $get) {
                                         return Bakpia::pluck('name', 'id');
                                     })
-
+                                    ->searchable()
                                     ->required(),
 
                                 Forms\Components\Select::make('box_varian')
@@ -164,10 +189,12 @@ class BakpiaTransactionResource extends Resource
                                     ->options([
                                         'box_8' => 'isi 8',
                                         'box_18' => 'isi 18',
-                                    ]),
+                                    ])
+                                    ->required(),
                                 Forms\Components\TextInput::make('amount')
                                     ->label('jumlah box')
-                                    ->integer(),
+                                    ->integer()
+                                    ->required(),
                                 Forms\Components\TextInput::make('price_per')
                                     ->label('harga per box')
                                     // ->numeric()
@@ -184,15 +211,22 @@ class BakpiaTransactionResource extends Resource
                                                 $idOutlet = $get('../../id_outlet');
 
                                                 $res =  calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer);
+                                                $res2 = dataBakpia($idBakpiaPer, $boxVarianPer,);
 
                                                 $set('price_per', $res[0]);
 
                                                 $set('stock_latest', $res[1]);
 
                                                 $set('stock_after_sold', $res[2]);
+
+                                                $set('name_bakpia', $res2[0]);
+
+                                                $set('price_bakpia', $res2[1]);
                                             })
                                     ),
 
+                                Forms\Components\Hidden::make('name_bakpia'),
+                                Forms\Components\Hidden::make('price_bakpia'),
                                 Forms\Components\TextInput::make('stock_latest')
                                     ->label('stock terakhir')
                                     ->integer()
@@ -362,6 +396,10 @@ class BakpiaTransactionResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('Pdf')
+                    ->icon('heroicon-m-clipboard')
+                    ->url(fn (BakpiaTransaction $record) => route('bakpiaTransaction.report', $record))
+                    ->openUrlInNewTab(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
