@@ -10,7 +10,7 @@
         body {
             font-family: 'monospace', 'Courier New', Courier, sans-serif;
             /* Use a monospace font */
-            font-size: 38px;
+            font-size: 36px;
             /* Smaller font size for thermal printers */
             line-height: 1.1;
             margin: 0;
@@ -138,7 +138,7 @@
     @if (!empty($record->transaction_detail) )
     @foreach ($transaction_detail as $detail)
     <div class="item-row-fallback">
-        <span class="name-qty">{{ $detail->name_bakpia ?? 'Item Name' }} ({{$detail->amount ?? 1 }}x)</span>
+        <span class="name-qty">{{ $detail->name_bakpia ?? 'Item Name' }} {{ $detail->isi ?? 'isi 8' }}  ({{$detail->amount ?? 1 }}x)</span>
         <span class="price">Rp {{ number_format($detail->price_per ?? 0, 0, ',', '.') }}</span>
     </div>
     @endforeach

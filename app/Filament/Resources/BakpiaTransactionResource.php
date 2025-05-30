@@ -53,7 +53,7 @@ class BakpiaTransactionResource extends Resource
             // You can now use $selectedPacketId to fetch related data or update other fields.
             if ($idBakpiaPer) {
                 $sparepart = Bakpia::find($idBakpiaPer);
-                
+
                 if ($sparepart) {
                     // Example: Set another TextInput named 'sparepart_price' with the selected sparepart's price
                     if ($boxVarianPer === 'box_8') {
@@ -197,6 +197,7 @@ class BakpiaTransactionResource extends Resource
                                     ->required(),
                                 Forms\Components\TextInput::make('price_per')
                                     ->label('harga per box')
+                                    ->prefix('Rp')
                                     // ->numeric()
                                     // ->disabled()
                                     ->dehydrated(true)
@@ -249,6 +250,7 @@ class BakpiaTransactionResource extends Resource
                             ->label('total harga yang harus dibayar')
                             ->numeric()
                             ->disabled()
+                            ->prefix('Rp')
                             ->dehydrated(true)
                             ->reactive()
                             ->required()
@@ -349,6 +351,8 @@ class BakpiaTransactionResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total_price')
                     ->label('total harga')
+                    ->money('idr')
+                    ->prefix('Rp ')
                     ->numeric()
                     ->summarize(Sum::make()),
             ])
@@ -403,7 +407,7 @@ class BakpiaTransactionResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    // Tables\Actions\DeleteBulkAction::make(),
                     ExportBulkAction::make()->exports([
                         ExcelExport::make()->withColumns([
                             Column::make('id_transaction'),

@@ -23,10 +23,25 @@ class DownloadPdfController extends Controller
             ->first();
 
         $transaction_detail = json_decode($record->transaction_detail);
+        // dd($transaction_detail);
+        foreach ($transaction_detail as $key => $value) {
+
+            if (isset($value->box_varian)) { // Always good to check if property exists
+                switch ($value->box_varian) {
+                    case "box_8":
+                        $value->isi = 'isi 8';
+                        break;
+                    case "box_18":
+                        $value->isi = 'isi 18';
+                        break;
+                }
+            }
+        }
 
         //PARSING DATE
         $record->created_at = Carbon::parse($record->created_at)->format('d M Y h:i:s');
-        // dd($record);
+
+
         $pdf = App::make('dompdf.wrapper');
         $pdf->loadView('pdf.bakpia_transaction_report', compact('record', 'transaction_detail')); // Pass the variable $record to the blade file
         return $pdf->stream(); // renders the PDF in the browser
