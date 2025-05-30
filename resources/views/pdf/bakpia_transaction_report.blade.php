@@ -12,7 +12,7 @@
             /* Use a monospace font */
             font-size: 40px;
             /* Smaller font size for thermal printers */
-            line-height: 1.2;
+            line-height: 1;
             margin: 0;
             padding: 2px;
             /* Small padding around the content */
@@ -78,7 +78,7 @@
 
         /* Fallback for older/simpler printers if floats don't work well */
         .item-row-fallback {
-            margin-bottom: 2px;
+            margin-bottom: 0px;
         }
 
         .item-row-fallback .name-qty {
@@ -91,7 +91,7 @@
 
         .item-row-fallback .price {
             display: inline-block;
-            width: 28%;
+            width: 50%;
             /* Adjust as needed */
             text-align: right;
         }
@@ -139,7 +139,7 @@
     @foreach ($transaction_detail as $detail)
     <div class="item-row-fallback">
         <span class="name-qty">{{ $detail->name_bakpia ?? 'Item Name' }} ({{$detail->amount ?? 1 }}x)</span>
-        <span class="price">Rp {{ $detail->price_per ?? 'price' }}</span>
+        <span class="price">Rp  {{ number_format($detail->price_per ?? 0, 0, ',', '.') }}</span>
     </div>
     @endforeach
     @else
