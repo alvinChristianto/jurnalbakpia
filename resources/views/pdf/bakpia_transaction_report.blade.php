@@ -10,11 +10,11 @@
         body {
             font-family: 'monospace', 'Courier New', Courier, sans-serif;
             /* Use a monospace font */
-            font-size: 30px;
+            font-size: 40px;
             /* Smaller font size for thermal printers */
             line-height: 1.2;
             margin: 0;
-            padding: 5px;
+            padding: 2px;
             /* Small padding around the content */
             /* width: 58mm; */
             /* Typical thermal printer width (e.g., 58mm or 80mm) */
@@ -120,7 +120,7 @@
 <body>
 
     <div class="center">
-        <p class="bold" style="font-size: 35px; margin-bottom: 2px;">{{ $record->outlet_name ?? 'Your Company Name' }}</p>
+        <p class="bold" style="font-size: 45px; margin-bottom: 20px;">{{ $record->outlet_name ?? 'Your Company Name' }}</p>
 
     </div>
 
@@ -148,13 +148,13 @@
 
     <div class="divider"></div>
 
-    <p class="right bold" style="font-size: 24px;">
+    <p class="right bold" style="font-size: 36px;">
         Total: Rp {{ number_format($record->total_price ?? 0, 0, ',', '.') }}
     </p>
-    <p class="right" style="font-size: 20px;">
+    <p class="right" style="font-size: 32px;">
         Diskon: Rp {{ number_format($record->discount ?? 0, 0, ',', '.') }}
     </p>
-    <p class="right bold" style="font-size: 26px;">
+    <p class="right bold" style="font-size: 40px;">
         Grand Total: Rp {{ number_format(($record->total_price ?? 0) - ($record->discount ?? 0), 0, ',', '.') }}
     </p>
 
@@ -165,8 +165,8 @@
         <p style="margin-top: 0; margin-bottom: 5px;">Terima Kasih Atas Kunjungan Anda!</p>
         <p style="margin-top: 0; margin-bottom: 5px;">** Barang yang sudah dibeli tidak dapat dikembalikan **</p>
         {{-- Placeholder for QR Code (e.g., for loyalty points, website link) --}}
-        <p style="margin-top: 0; margin-bottom: 5px;">** www.bakpia3generasi.id **</p>
-        <p style="margin-top: 0; font-size: 8px;">Kunjungi website kami untuk informasi lebih lanjut</p>
+        <!-- <p style="margin-top: 0; margin-bottom: 5px;">** www.bakpia3generasi.id **</p>
+        <p style="margin-top: 0; font-size: 35px;">Kunjungi website kami untuk informasi lebih lanjut</p> -->
     </div>
 
 </body>
