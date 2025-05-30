@@ -129,7 +129,7 @@
     <p style="margin: 5px 0;">
         Tanggal: {{ $record->created_at }}<br>
         No. Transaksi: <span class="bold">{{ $record->id_transaction }}</span><br>
-        Pelanggan: {{ $record->customer_name ?? 'Umum' }}
+        Kasir: {{ $record->transaction_admin ?? 'Umum' }}
     </p>
 
     <div class="divider"></div>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class DownloadPdfController extends Controller
@@ -40,7 +41,8 @@ class DownloadPdfController extends Controller
 
         //PARSING DATE
         $record->created_at = Carbon::parse($record->created_at)->format('d M Y h:i:s');
-
+        $record->transaction_admin = Auth::user()->name;
+        // dd($record);
 
         $pdf = App::make('dompdf.wrapper');
         $pdf->loadView('pdf.bakpia_transaction_report', compact('record', 'transaction_detail')); // Pass the variable $record to the blade file
