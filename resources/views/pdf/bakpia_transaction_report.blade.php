@@ -10,15 +10,15 @@
         body {
             font-family: 'monospace', 'Courier New', Courier, sans-serif;
             /* Use a monospace font */
-            font-size: 10px;
+            font-size: 30px;
             /* Smaller font size for thermal printers */
             line-height: 1.2;
             margin: 0;
             padding: 5px;
             /* Small padding around the content */
-            width: 58mm;
+            /* width: 58mm; */
             /* Typical thermal printer width (e.g., 58mm or 80mm) */
-            max-width: 58mm;
+            /* max-width: 58mm; */
             /* Ensure it doesn't expand */
             box-sizing: border-box;
             /* Include padding in width */
@@ -39,7 +39,7 @@
         }
 
         .divider {
-            border-top: 1px dashed #000;
+            border-top: 5px dashed #000;
             margin: 5px 0;
         }
 
@@ -120,7 +120,7 @@
 <body>
 
     <div class="center">
-        <p class="bold" style="font-size: 12px; margin-bottom: 2px;">{{ $record->outlet_name ?? 'Your Company Name' }}</p>
+        <p class="bold" style="font-size: 35px; margin-bottom: 2px;">{{ $record->outlet_name ?? 'Your Company Name' }}</p>
 
     </div>
 
@@ -148,13 +148,13 @@
 
     <div class="divider"></div>
 
-    <p class="right bold" style="font-size: 11px;">
+    <p class="right bold" style="font-size: 24px;">
         Total: Rp {{ number_format($record->total_price ?? 0, 0, ',', '.') }}
     </p>
-    <p class="right" style="font-size: 9px;">
+    <p class="right" style="font-size: 20px;">
         Diskon: Rp {{ number_format($record->discount ?? 0, 0, ',', '.') }}
     </p>
-    <p class="right bold" style="font-size: 12px;">
+    <p class="right bold" style="font-size: 26px;">
         Grand Total: Rp {{ number_format(($record->total_price ?? 0) - ($record->discount ?? 0), 0, ',', '.') }}
     </p>
 
