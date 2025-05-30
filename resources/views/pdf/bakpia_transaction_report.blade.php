@@ -10,11 +10,11 @@
         body {
             font-family: 'monospace', 'Courier New', Courier, sans-serif;
             /* Use a monospace font */
-            font-size: 40px;
+            font-size: 38px;
             /* Smaller font size for thermal printers */
-            line-height: 1;
+            line-height: 1.1;
             margin: 0;
-            padding: 2px;
+            padding: 1px;
             /* Small padding around the content */
             /* width: 58mm; */
             /* Typical thermal printer width (e.g., 58mm or 80mm) */
@@ -40,7 +40,7 @@
 
         .divider {
             border-top: 5px dashed #000;
-            margin: 5px 0;
+            margin: 3px 0;
         }
 
         .item-row {
@@ -83,7 +83,7 @@
 
         .item-row-fallback .name-qty {
             display: inline-block;
-            width: 70%;
+            width: 100%;
             /* Adjust as needed */
             white-space: normal;
             word-wrap: break-word;
@@ -91,7 +91,7 @@
 
         .item-row-fallback .price {
             display: inline-block;
-            width: 50%;
+            width: 100%;
             /* Adjust as needed */
             text-align: right;
         }
@@ -120,7 +120,7 @@
 <body>
 
     <div class="center">
-        <p class="bold" style="font-size: 45px; margin-bottom: 20px;">{{ $record->outlet_name ?? 'Your Company Name' }}</p>
+        <p class="bold" style="font-size: 45px; margin-bottom: 10px;">{{ $record->outlet_name ?? 'Your Company Name' }}</p>
 
     </div>
 
@@ -139,7 +139,7 @@
     @foreach ($transaction_detail as $detail)
     <div class="item-row-fallback">
         <span class="name-qty">{{ $detail->name_bakpia ?? 'Item Name' }} ({{$detail->amount ?? 1 }}x)</span>
-        <span class="price">Rp  {{ number_format($detail->price_per ?? 0, 0, ',', '.') }}</span>
+        <span class="price">Rp {{ number_format($detail->price_per ?? 0, 0, ',', '.') }}</span>
     </div>
     @endforeach
     @else
@@ -148,7 +148,7 @@
 
     <div class="divider"></div>
 
-    <p class="right bold" style="font-size: 36px;">
+    <p class="right bold" style="font-size: 34px">
         Total: Rp {{ number_format($record->total_price ?? 0, 0, ',', '.') }}
     </p>
     <p class="right" style="font-size: 32px;">
@@ -161,9 +161,9 @@
     <div class="divider"></div>
 
     <div class="center">
-        <p style="margin-bottom: 5px;">Metode Pembayaran: <span class="bold">{{ $record->payment_name ?? 'CASH' }}</span></p>
-        <p style="margin-top: 0; margin-bottom: 5px;">Terima Kasih Atas Kunjungan Anda!</p>
-        <p style="margin-top: 0; margin-bottom: 5px;">** Barang yang sudah dibeli tidak dapat dikembalikan **</p>
+        <p style="margin-bottom: 3px;">Metode Pembayaran: <span class="bold">{{ $record->payment_name ?? 'CASH' }}</span></p>
+        <p style="margin-top: 0; margin-bottom: 3px;">Terima Kasih Atas Kunjungan Anda!</p>
+        <p style="margin-top: 0; margin-bottom: 3px;">** Barang yang sudah dibeli tidak dapat dikembalikan **</p>
         {{-- Placeholder for QR Code (e.g., for loyalty points, website link) --}}
         <!-- <p style="margin-top: 0; margin-bottom: 5px;">** www.bakpia3generasi.id **</p>
         <p style="margin-top: 0; font-size: 35px;">Kunjungi website kami untuk informasi lebih lanjut</p> -->
