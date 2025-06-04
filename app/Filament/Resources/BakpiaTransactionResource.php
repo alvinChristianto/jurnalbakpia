@@ -242,7 +242,7 @@ class BakpiaTransactionResource extends Resource
 
                             ])
                             ->columnSpan('full')
-                            ->columns(4)
+                            ->columns(['md' => 3, 'xl' => 4])
                     ]),
                 Fieldset::make('Data Pembayaran')
                     ->schema([
@@ -400,7 +400,7 @@ class BakpiaTransactionResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('Pdf')
+                Tables\Actions\Action::make('Pdf-nota')
                     ->icon('heroicon-m-clipboard')
                     ->url(fn (BakpiaTransaction $record) => route('bakpiaTransaction.report', $record))
                     ->openUrlInNewTab(),
