@@ -108,4 +108,19 @@ class BakpiaStockResource extends Resource
             'edit' => Pages\EditBakpiaStock::route('/{record}/edit'),
         ];
     }
+    
+    public static function getEloquentQuery(): Builder
+    {
+        $adminOutlet = [1, 0];
+        $user = auth()->user();
+
+        $outlets = $user->outlets;
+        $idUser = $user->id;
+        // dd($idUser);
+
+        if (!in_array($idUser, $adminOutlet)) {
+            return parent::getEloquentQuery()->wherein('id_outlet', $outlets);
+        }
+        return parent::getEloquentQuery();
+    }
 }
