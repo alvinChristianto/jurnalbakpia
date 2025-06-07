@@ -6,6 +6,7 @@ use App\Filament\Resources\BakpiaTransactionResource;
 use App\Models\BakpiaStock;
 use Carbon\Carbon;
 use Filament\Actions;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -74,8 +75,17 @@ class CreateBakpiaTransaction extends CreateRecord
         }
         return $data;
     }
+
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');
+    }
+
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getCreateFormAction()->label('Simpan Transaksi'),
+            $this->getCancelFormAction()
+        ];
     }
 }
