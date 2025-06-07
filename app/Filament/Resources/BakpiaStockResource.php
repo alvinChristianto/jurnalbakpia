@@ -43,6 +43,8 @@ class BakpiaStockResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('bakpia.name')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('id_transaction')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('outlet.name')
                     ->label('outlet tujuan'),
                 Tables\Columns\TextColumn::make('box_varian'),
@@ -90,7 +92,8 @@ class BakpiaStockResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('created_at', 'desc');;
     }
 
     public static function getRelations(): array
@@ -108,7 +111,7 @@ class BakpiaStockResource extends Resource
             'edit' => Pages\EditBakpiaStock::route('/{record}/edit'),
         ];
     }
-    
+
     public static function getEloquentQuery(): Builder
     {
         $adminOutlet = [1, 0];
