@@ -9,20 +9,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Outlet extends Model
 {
     use HasFactory;
-    
+
     protected $table = 'outlets';
     protected $primaryKey = 'id_outlet';
     public $incrementing = false;
 
     // protected $casts = ['id_hotel' => 'string'];
-   
+
     /**
      * The data type of the primary key ID.
      *
      * @var string
      */
     protected $keyType = 'string';
-    
+
     public function bakpiaTransaction(): HasMany
     {
         return $this->hasMany(BakpiaTransaction::class, 'id');
@@ -32,10 +32,15 @@ class Outlet extends Model
     {
         return $this->hasMany(BakpiaShipment::class, 'id_outlet');
     }
-    
+
     public function bakpiaStock(): HasMany
     {
         return $this->hasMany(BakpiaStock::class, 'id_outlet');
+    }
+
+    public function otherProductTransaction(): HasMany
+    {
+        return $this->hasMany(OtherProductTransaction::class, 'id');
     }
 
 

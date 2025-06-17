@@ -13,6 +13,11 @@ class Customer extends Model
         return $this->hasMany(BakpiaTransaction::class);
     }
 
+     public function otherProductTransaction(): HasMany
+    {
+        return $this->hasMany(OtherProductTransaction::class);
+    }
+
     // public function user(): BelongsTo
     // {
     //     return $this->belongsTo(User::class);
