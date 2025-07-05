@@ -8,3 +8,4 @@ Route::get('/', function () {
 });
 
 Route::get('/bakpia-transaction-invoice/{record}', [DownloadPdfController::class, 'bakpiaTransaction'])->name('bakpiaTransaction.report');
+Route::get('/other-transaction-invoice/{record}', [DownloadPdfController::class, 'otherProductTransaction'])->name('otherProductTransaction.report');
