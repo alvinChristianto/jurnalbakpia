@@ -97,7 +97,8 @@ class BakpiaTransactionOverview extends BaseWidget
          */
 
         //VARIABLE
-        $sutomo = 'OUTLET_1';
+        $idGodean = env("ID_GODEAN", "");
+        $idBjjsutomo = env("ID_BAJAJSUTOMO", "");
 
         $now = Carbon::now()->format('Y-m-d');
         // Mendapatkan tanggal saat ini
@@ -106,20 +107,45 @@ class BakpiaTransactionOverview extends BaseWidget
         $currentYear = Carbon::now()->year;
 
         //GET_REVENUE
-        $sut_dailyRevenue = 'Rp ' . number_format($this->getDailyRevenue($sutomo), 2, ',', '.');
-        $sut_monthlyRevenue = 'Rp ' . number_format($this->getMonthRevenue($sutomo), 2, ',', '.');
-        $sut_yearlyRevenue = 'Rp ' . number_format($this->getYearRevenue($sutomo), 2, ',', '.');
+        $sut_dailyRevenue = 'Rp ' . number_format($this->getDailyRevenue($idGodean), 2, ',', '.');
+        $sut_monthlyRevenue = 'Rp ' . number_format($this->getMonthRevenue($idGodean), 2, ',', '.');
+        $sut_yearlyRevenue = 'Rp ' . number_format($this->getYearRevenue($idGodean), 2, ',', '.');
+
+        $bjjSut_dailyRevenue = 'Rp ' . number_format($this->getDailyRevenue($idBjjsutomo), 2, ',', '.');
+        $bjjSut_monthlyRevenue = 'Rp ' . number_format($this->getMonthRevenue($idBjjsutomo), 2, ',', '.');
+        $bjjSut_yearlyRevenue = 'Rp ' . number_format($this->getYearRevenue($idBjjsutomo), 2, ',', '.');
 
 
         //GET_STOCK
-        $sut_StkKeju8 = $this->getLatestStock($sutomo, 1, 'box_8');
-        $sut_StkKeju18 = $this->getLatestStock($sutomo, 1, 'box_18');
-        $sut_StkAbon8 = $this->getLatestStock($sutomo, 2, 'box_8');
-        $sut_StkAbon18 = $this->getLatestStock($sutomo, 2, 'box_18');
+        $sut_StkKeju8 = $this->getLatestStock($idGodean, 1, 'box_8');
+        $sut_StkKeju18 = $this->getLatestStock($idGodean, 1, 'box_18');
+        $sut_StkAbon8 = $this->getLatestStock($idGodean, 2, 'box_8');
+        $sut_StkAbon18 = $this->getLatestStock($idGodean, 2, 'box_18');
+        $sut_StkKchij8 = $this->getLatestStock($idGodean, 3, 'box_8');
+        $sut_StkKchij18 = $this->getLatestStock($idGodean, 3, 'box_18');
+        $sut_StkCklAlm8 = $this->getLatestStock($idGodean, 4, 'box_8');
+        $sut_StkCklAlm18 = $this->getLatestStock($idGodean, 4, 'box_18');
+        $sut_StkCash8 = $this->getLatestStock($idGodean, 5, 'box_8');
+        $sut_StkCash18 = $this->getLatestStock($idGodean, 5, 'box_18');
+        $sut_StkPiaCklALm8 = $this->getLatestStock($idGodean, 6, 'box_8');
+        $sut_StkPiaCklALm18 = $this->getLatestStock($idGodean, 6, 'box_18');
+
+        $bjjSut_StkKeju8 = $this->getLatestStock($idBjjsutomo, 1, 'box_8');
+        $bjjSut_StkKeju18 = $this->getLatestStock($idBjjsutomo, 1, 'box_18');
+        $bjjSut_StkAbon8 = $this->getLatestStock($idBjjsutomo, 2, 'box_8');
+        $bjjSut_StkAbon18 = $this->getLatestStock($idBjjsutomo, 2, 'box_18');
+        $bjjSut_StkKchij8 = $this->getLatestStock($idGodean, 3, 'box_8');
+        $bjjSut_StkKchij18 = $this->getLatestStock($idGodean, 3, 'box_18');
+        $bjjSut_StkCklAlm8 = $this->getLatestStock($idBjjsutomo, 4, 'box_8');
+        $bjjSut_StkCklAlm18 = $this->getLatestStock($idBjjsutomo, 4, 'box_18');
+        $bjjSut_StkCash8 = $this->getLatestStock($idBjjsutomo, 5, 'box_8');
+        $bjjSut_StkCash18 = $this->getLatestStock($idBjjsutomo, 5, 'box_18');
+        $bjjSut_StkPiaCklALm8 = $this->getLatestStock($idBjjsutomo, 6, 'box_8');
+        $bjjSut_StkPiaCklALm18 = $this->getLatestStock($idBjjsutomo, 6, 'box_18');
 
         // dd($StkKeju8);
         return [
-            Stat::make('PENDAPATAN DAN STOCK GODEAN', '')
+            Stat::make('PENDAPATAN DAN STOCK BAKPIA GODEAN', '')
                 // Stat::make('Pend. DAILY',  $dailyRevenue . " | " . $monthlyRevenue. " | " . $monthlyRevenue)
                 ->description(new HtmlString('
                 <b>PENDAPATAN : </b>
@@ -139,7 +165,45 @@ class BakpiaTransactionOverview extends BaseWidget
                 <br/>
                  Abon isi 8 (' . $sut_StkAbon8 . ') | isi 18 (' . $sut_StkAbon18 . '),
                 <br/>
-                 Kacang Almond isi 8 (' . $sut_StkKeju8 . ') | isi 8 (' . $sut_StkKeju8 . '),
+                 Kacang Hijau isi 8 (' . $sut_StkKchij8 . ') | isi 8 (' . $sut_StkKchij18 . '),
+                <br/>
+                 Coklat Almond 8 (' . $sut_StkCklAlm8 . ') | isi 8 (' . $sut_StkCklAlm18 . '),
+                <br/>
+                 Cashew 8 (' . $sut_StkCash8 . ') | isi 8 (' . $sut_StkCash18 . '),
+                <br/>
+                 Pia Cklt Almond 8 (' . $sut_StkPiaCklALm8 . ') | isi 8 (' . $sut_StkPiaCklALm18 . '),
+                <br/>'))
+
+                ->color('info'),
+
+
+            Stat::make('PENDAPATAN DAN STOCK BAKPIA BAJAJ SUTOMO', '')
+                // Stat::make('Pend. DAILY',  $dailyRevenue . " | " . $monthlyRevenue. " | " . $monthlyRevenue)
+                ->description(new HtmlString('
+                <b>PENDAPATAN : </b>
+                <br/> 
+                Harian  ' . Carbon::now()->format('d M Y') . ' : ' . $bjjSut_dailyRevenue . ',
+                <br/> 
+                Bulanan   ' .  Carbon::now()->format('F') . ' : ' . $bjjSut_monthlyRevenue . ', 
+                <br/> 
+                Tahunan   ' .  $currentYear . ' : ' . $bjjSut_yearlyRevenue . ',
+                <br/> 
+                 <br/> <br/> 
+
+                 
+                <b>STOCK :</b> 
+                <br/> 
+                 Keju isi 8 (' . $bjjSut_StkKeju8 . ') | isi 18 (' . $bjjSut_StkKeju18 . '),
+                <br/>
+                 Abon isi 8 (' . $bjjSut_StkAbon8 . ') | isi 18 (' . $bjjSut_StkAbon18 . '),
+                <br/>
+                 Kacang Hijau isi 8 (' . $bjjSut_StkKchij8 . ') | isi 8 (' . $bjjSut_StkKchij18 . '),
+                <br/>
+                 Coklat Almond 8 (' . $bjjSut_StkCklAlm8 . ') | isi 8 (' . $bjjSut_StkCklAlm18 . '),
+                <br/>
+                 Cashew 8 (' . $bjjSut_StkCash8 . ') | isi 8 (' . $bjjSut_StkCash18 . '),
+                <br/>
+                 Pia Cklt Almond 8 (' . $bjjSut_StkPiaCklALm8 . ') | isi 8 (' . $bjjSut_StkPiaCklALm18 . '),
                 <br/>'))
 
                 // Keju isi 8 (' . $StkKeju8 . ') | isi 8 (' . $StkKeju8 . '),
