@@ -13,6 +13,8 @@
         "filament/notifications": "^3.3",
         "flowframe/laravel-trend": "^0.4.0",
         "laravel/framework": "^12.0",
+        "laravel/octane": "^2.13",
+        "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "pxlrbt/filament-excel": "^2.4"
     },
