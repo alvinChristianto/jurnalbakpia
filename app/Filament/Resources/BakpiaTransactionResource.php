@@ -43,103 +43,106 @@ class BakpiaTransactionResource extends Resource
 
     protected static ?string $modelLabel = 'Transaksi Bakpia';
 
+    public static function dataBakpia($idB, $var)
+    {
+        $idBakpiaPer = $idB;
+        $boxVarianPer = $var;
+
+        // You can now use $selectedPacketId to fetch related data or update other fields.
+        if ($idBakpiaPer) {
+            $sparepart = Bakpia::find($idBakpiaPer);
+
+            if ($sparepart) {
+                // Example: Set another TextInput named 'sparepart_price' with the selected sparepart's price
+                if ($boxVarianPer === 'box_8') {
+                    $prc =  $sparepart->price_8;
+                } elseif ($boxVarianPer === 'box_18') {
+                    $prc =  $sparepart->price_18;
+                }
+                Log::info($sparepart->name);
+                Log::info($prc);
+                return [$sparepart->name, $prc];
+            }
+        } else {
+
+            return ["", ""];
+        }
+    }
+    public static function calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer)
+    {
+        Log::info($boxVarianPer);
+        $price = 0;
+        $stockFromGudang = BakpiaStock::all()
+            ->where('id_outlet', $idOutlet)
+            ->where('id_bakpia', $idBakpiaPer)
+            ->where('box_varian', $boxVarianPer)
+            ->where('status', 'STOCK_IN')
+            ->sum('amount');
+
+        $stockSold = BakpiaStock::all()
+            ->where('id_outlet', $idOutlet)
+            ->where('id_bakpia', $idBakpiaPer)
+            ->where('box_varian', $boxVarianPer)
+            ->where('status', 'STOCK_SOLD')
+            ->sum('amount');
+
+        $stockReturned = BakpiaStock::all()
+            ->where('id_outlet', $idOutlet)
+            ->where('id_bakpia', $idBakpiaPer)
+            ->where('box_varian', $boxVarianPer)
+            ->where('status', 'RETURNED')
+            ->sum('amount');
+
+        $totalStock = $stockFromGudang - $stockSold - $stockReturned;
+        $checkStockBakpia = $totalStock - $amountPer;
+
+        Log::info($checkStockBakpia . ' | IN ' . $stockFromGudang . ' | SOLD ' . $stockSold . ' | RETN ' . $stockReturned . " || " . $amountPer);
+        if ($checkStockBakpia < 0) {
+            Notification::make()
+                ->title('Error') // Set the title of the notification
+                ->body('No Bakpia Stock left | ' . $checkStockBakpia) // Set the body of the notification
+                ->danger() // Set the type to danger (for error)
+                ->send(); // Send the notification
+
+            // throw new \Exception('Record creation failed due to no bakpia stock left');
+
+            return [0, $totalStock, $checkStockBakpia];
+        }
+
+        if ($boxVarianPer === 'box_8') {
+            $price = Bakpia::where('id', $idBakpiaPer)->value('price_8');
+        } else if ($boxVarianPer === 'box_18') {
+            $price = Bakpia::where('id', $idBakpiaPer)->value('price_18');
+        }
+
+        Log::info($price);
+        $price = $price * $amountPer;
+
+        return [$price, $totalStock, $checkStockBakpia];
+    }
+
+    public static function calculatePrice($transactDetail)
+    {
+        $tempSumAll = 0;
+        foreach ($transactDetail as $key => $bakpiaDetail) {
+            $idBakpia = $bakpiaDetail['id_bakpia'];
+            $box_varian = $bakpiaDetail['box_varian'];
+            $amountBakpia = $bakpiaDetail['amount'];
+            $pricePer = $bakpiaDetail['price_per'];
+
+            $price = $pricePer;
+            Log::info($price);
+
+            $tempSumAll = $tempSumAll + $price;
+        }
+
+        return $tempSumAll;
+    }
+
+
     public static function form(Form $form): Form
     {
-        function dataBakpia($idB, $var)
-        {
-            $idBakpiaPer = $idB;
-            $boxVarianPer = $var;
 
-            // You can now use $selectedPacketId to fetch related data or update other fields.
-            if ($idBakpiaPer) {
-                $sparepart = Bakpia::find($idBakpiaPer);
-
-                if ($sparepart) {
-                    // Example: Set another TextInput named 'sparepart_price' with the selected sparepart's price
-                    if ($boxVarianPer === 'box_8') {
-                        $prc =  $sparepart->price_8;
-                    } elseif ($boxVarianPer === 'box_18') {
-                        $prc =  $sparepart->price_18;
-                    }
-                    Log::info($sparepart->name);
-                    Log::info($prc);
-                    return [$sparepart->name, $prc];
-                }
-            } else {
-
-                return ["", ""];
-            }
-        }
-        function calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer)
-        {
-            Log::info($boxVarianPer);
-            $price = 0;
-            $stockFromGudang = BakpiaStock::all()
-                ->where('id_outlet', $idOutlet)
-                ->where('id_bakpia', $idBakpiaPer)
-                ->where('box_varian', $boxVarianPer)
-                ->where('status', 'STOCK_IN')
-                ->sum('amount');
-
-            $stockSold = BakpiaStock::all()
-                ->where('id_outlet', $idOutlet)
-                ->where('id_bakpia', $idBakpiaPer)
-                ->where('box_varian', $boxVarianPer)
-                ->where('status', 'STOCK_SOLD')
-                ->sum('amount');
-
-            $stockReturned = BakpiaStock::all()
-                ->where('id_outlet', $idOutlet)
-                ->where('id_bakpia', $idBakpiaPer)
-                ->where('box_varian', $boxVarianPer)
-                ->where('status', 'RETURNED')
-                ->sum('amount');
-
-            $totalStock = $stockFromGudang - $stockSold - $stockReturned;
-            $checkStockBakpia = $totalStock - $amountPer;
-
-            Log::info($checkStockBakpia . ' | IN ' . $stockFromGudang . ' | SOLD ' . $stockSold . ' | RETN ' . $stockReturned . " || " . $amountPer);
-            if ($checkStockBakpia < 0) {
-                Notification::make()
-                    ->title('Error') // Set the title of the notification
-                    ->body('No Bakpia Stock left | ' . $checkStockBakpia) // Set the body of the notification
-                    ->danger() // Set the type to danger (for error)
-                    ->send(); // Send the notification
-
-                // throw new \Exception('Record creation failed due to no bakpia stock left');
-
-                return [0, $totalStock, $checkStockBakpia];
-            }
-
-            if ($boxVarianPer === 'box_8') {
-                $price = Bakpia::where('id', $idBakpiaPer)->value('price_8');
-            } else if ($boxVarianPer === 'box_18') {
-                $price = Bakpia::where('id', $idBakpiaPer)->value('price_18');
-            }
-
-            Log::info($price);
-            $price = $price * $amountPer;
-
-            return [$price, $totalStock, $checkStockBakpia];
-        }
-
-        function calculatePrice($transactDetail)
-        {
-            $tempSumAll = 0;
-            foreach ($transactDetail as $key => $bakpiaDetail) {
-                $idBakpia = $bakpiaDetail['id_bakpia'];
-                $box_varian = $bakpiaDetail['box_varian'];
-                $amountBakpia = $bakpiaDetail['amount'];
-                $pricePer = $bakpiaDetail['price_per'];
-
-                $price = $pricePer;
-                Log::info($price);
-
-                $tempSumAll = $tempSumAll + $price;
-            }
-
-            return $tempSumAll;
-        }
 
         return $form
             ->schema([
@@ -211,8 +214,8 @@ class BakpiaTransactionResource extends Resource
                                                 $idBakpiaPer = $get('id_bakpia');
                                                 $idOutlet = $get('../../id_outlet');
 
-                                                $res =  calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer);
-                                                $res2 = dataBakpia($idBakpiaPer, $boxVarianPer,);
+                                                $res =  static::calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer);
+                                                $res2 = static::dataBakpia($idBakpiaPer, $boxVarianPer,);
 
                                                 $set('price_per', $res[0]);
 
@@ -260,7 +263,7 @@ class BakpiaTransactionResource extends Resource
                                     ->action(function (Set $set, Get $get, $state) {
                                         $transaction_detail = $get('transaction_detail');
 
-                                        $priceTotl =  calculatePrice($transaction_detail);
+                                        $priceTotl =  static::calculatePrice($transaction_detail);
                                         Log::info($priceTotl);
                                         $set('total_price', $priceTotl);
                                     })
@@ -381,11 +384,11 @@ class BakpiaTransactionResource extends Resource
                             return $query
                                 ->when(
                                     $data['created_from'],
-                                    fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                                    fn(Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
                                 )
                                 ->when(
                                     $data['created_until'],
-                                    fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                                    fn(Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
                                 );
                         }),
                     Tables\Filters\SelectFilter::make('id_payment')
@@ -402,7 +405,7 @@ class BakpiaTransactionResource extends Resource
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('Pdf-nota')
                     ->icon('heroicon-m-clipboard')
-                    ->url(fn (BakpiaTransaction $record) => route('bakpiaTransaction.report', $record))
+                    ->url(fn(BakpiaTransaction $record) => route('bakpiaTransaction.report', $record))
                     ->openUrlInNewTab(),
             ])
             ->bulkActions([
