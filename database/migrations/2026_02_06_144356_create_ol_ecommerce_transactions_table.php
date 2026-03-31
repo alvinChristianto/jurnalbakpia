@@ -31,8 +31,8 @@ return new class extends Migration
             $table->json('shipping_address_snapshot');
             $table->string('courier_name')->nullable();
             $table->string('payment_method')->nullable();
-            $table->string('payment_reference')->nullable();
-            $table->string('payment_url')->nullable();
+            $table->string('invoice_number_backend')->nullable();
+            $table->string('payment_token_midtrans')->nullable();
             $table->timestamp('paid_at')->nullable();
             $table->timestamps();
         });
@@ -42,7 +42,7 @@ return new class extends Migration
         Schema::create('ol_ecommerce_transaction_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transaction_id')->constrained('ol_ecommerce_transactions')->onDelete('cascade');
-            $table->foreignId('product_id')->constrained('bakpias')->onDelete('cascade');
+            $table->unsignedBigInteger('product_id');
             $table->string('product_name_snapshot');
             $table->integer('quantity');
             $table->decimal('price_per_item', 12, 2);

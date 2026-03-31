@@ -3,39 +3,251 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\OlCustomer;
+use App\Models\OlEcommerceTransaction;
+use App\Models\OlEcommerceTransactionDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Midtrans\Config;
+use Midtrans\Snap;
 
 class OrderController extends Controller
 {
-    public function checkout(Request $request)
+    public function getTokenMidtransv1(Request $request)
     {
-        // 1. Validate the data coming from Next.js localStorage
+        // 1. Setup Midtrans Config
+        Config::$serverKey = env('MIDTRANS_SERVER_KEY');
+        Config::$isProduction = (bool) env('MIDTRANS_IS_PROD', false);
+        Config::$isSanitized = true;
+        Config::$is3ds = true;
+
         $validated = $request->validate([
-            'items' => 'required|array',
-            'items.*.id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'address_id' => 'required|exists:addresses,id',
+            // Validate the nested customer_data object
+            'customer_data' => 'required|array',
+
+            // name cannot be null/empty
+            'customer_data.namaPenerima' => 'required|string|max:255',
+
+            // email cannot be null, must be a valid email format
+            'customer_data.email' => 'required|email|max:255',
+
+            // phone cannot be null
+            'customer_data.nomorTelepon' => 'required|string|min:8|max:15',
+
+            // Also validate your items while we're at it
+            'order_items' => 'required|array|min:1',
+            'total_price' => 'required|numeric|min:1',
+            'shipping_address' => 'required|array',
+            'shipping_cost' => 'required|numeric|min:0',
+            'tax_amount' => 'required|numeric|min:0',       //if this set to 0, then dont to send to item_details
         ]);
 
-        return DB::transaction(function () use ($request) {
-            // 2. Create the Order
-            $order = Order::create([
-                'user_id' => auth()->id(), // Assuming user is logged in via Sanctum
-                'status' => 'pending',
-                'order_number' => 'BAK-' . strtoupper(uniqid()),
-                'total_amount' => 0, // We will calculate this
-                'shipping_address_snapshot' => $request->address_id, // Simplified for now
+
+        $customerData = $validated['customer_data'];
+        $totalPrice = $validated['total_price'];
+        $orderDetail = $validated['order_items'];
+        $shippingDetail = $validated['shipping_address'];
+        $shippingCost = $validated['shipping_cost'];
+        $taxAmount = $validated['tax_amount'];
+
+
+        Log::info("API|getTokenMidtransv1|transactionToken-data-V1|parameter|" . $totalPrice . "|" . json_encode($customerData) . "|" . json_encode($orderDetail) . "|" . json_encode($shippingDetail));
+
+        // Create or get existing customer
+        //before OlCustomer created, make validation for email and name
+
+
+        $customer = OlCustomer::firstOrCreate(
+            // 1. Unique attribute to check
+            ['email' => $customerData['email']],
+
+            // 2. Data to insert if the customer doesn't exist
+            [
+                'name' => $customerData['namaPenerima'],
+                'phone_number' => $customerData['nomorTelepon'] ?? null,
+                'password' => bcrypt(Str::random(12)), // Only generated for new users
+            ]
+        );
+
+        // Now you can safely get the ID
+        $getIdCustomer = $customer->id;
+        $OlTransaction = OlEcommerceTransaction::create([
+            'ol_customer_id' => $getIdCustomer,
+            'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
+            'subtotal' => $totalPrice,
+            'shipping_cost' => $shippingCost,
+            'service_fee' => $taxAmount,
+            'grand_total' => $totalPrice,
+            'shipping_address_snapshot' => json_encode($shippingDetail),
+            'status' => 'pending',
+        ]);
+
+        // not necessary for now
+        $OrderId = $OlTransaction->id;
+
+        foreach ($orderDetail as $item) {
+            OlEcommerceTransactionDetail::create([
+                'transaction_id' => $OrderId,
+                'product_id' => $item['id'],
+                'product_name_snapshot' => $item['name'],
+                'quantity' => $item['quantity'],
+                'price_per_item' => $item['price'],
+                'note' => $item['note'] ?? null,
+            ]);
+        }
+
+
+
+        // 3. Generate the Unique Order ID for Midtrans
+        // We combine your Invoice Number + 4 Random Chars to avoid "Duplicate Order ID" errors in Midtrans
+        $fourUniqDigit = strtoupper(Str::random(4));
+        $midtransOrderId = $OlTransaction->invoice_number . "-" . $fourUniqDigit;
+
+
+        // You can set this to anything you want, or remove it if not needed  
+        $customField1 = "This is custom field 1";
+
+        $itemDetails = collect($orderDetail)->map(function ($item) {
+            return [
+                'id'       => $item['id'],
+                'price'    => (int) $item['price'],
+                'quantity' => (int) $item['quantity'],
+                'name'     => Str::limit($item['name'], 50),
+            ];
+        })->toArray();
+
+        if ($shippingCost > 0) {
+            $itemDetails[] = [
+                'id'       => 'SHP-01',
+                'price'    => $shippingCost,
+                'quantity' => 1,
+                'name'     => 'Shipping Fee',
+            ];
+        }
+
+        // 4. Push Tax into the array
+        if ($taxAmount > 0) {
+            $itemDetails[] = [
+                'id'       => 'TAX-01',
+                'price'    => $taxAmount,
+                'quantity' => 1,
+                'name'     => 'Tax (10%)',
+            ];
+        }
+
+        // 4. Prepare Midtrans Parameters
+        $params = [
+            'transaction_details' => [
+                'order_id' => $midtransOrderId,
+                'gross_amount' => (int) $totalPrice, // Must be integer
+            ],
+            'customer_details' => [
+                'first_name' => $customerData['namaPenerima'],
+                'last_name' => '', // You can split the name if needed'',
+                'email' => $customerData['email'],
+                'phone' => $customerData['nomorTelepon'] ?? '',
+            ],
+            'item_details' => $itemDetails,
+            'custom_field1' => $customField1,
+        ];
+
+        Log::info("API|getTokenMidtransv1|transactionToken-data-V1|parameter1|" . json_encode($params));
+
+        // 5. Get Snap Token
+        try {
+            $snapToken = Snap::getSnapToken($params);
+
+            // Save the Snap Token and the ID used to Midtrans into our DB
+            $OlTransaction->update([
+                'payment_reference' => $midtransOrderId,
+                'payment_url' => $snapToken,
             ]);
 
-            // 3. Logic to move items from request to order_items table
-            // [Insert logic to calculate totals and save items]
+            $reference = [
+                'invoice_number_backend' => $midtransOrderId,
+                'payment_token_midtrans' => $snapToken // We store the token here for easy access
+            ];
 
-            // 4. Return the order info to Next.js
             return response()->json([
-                'message' => 'Order created successfully',
-                'order' => $order
-            ], 201);
-        });
+                'data' => [
+                    'message' => 'Snap token generated',
+                    'snap_token' => $snapToken,
+                    'reference' => $reference
+                ]
+
+
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Midtrans Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function handleMidtransCallback(Request $request)
+    {
+        // 1. Setup Midtrans Config
+        Config::$serverKey = env('MIDTRANS_SERVER_KEY');
+        $hashes = hash("sha512", $request->order_id . $request->status_code . $request->gross_amount . Config::$serverKey);
+
+        $txStatus = $request->transaction_status;
+
+        //get original order id
+        $last_dash_pos = strrpos($request->order_id, '-');
+        $originalOrderId = substr($request->order_id, 0, $last_dash_pos);
+
+        if ($hashes == $request->signature_key) {
+            if ($txStatus == 'capture' || $txStatus == 'settlement') {
+                // Update transaction status in DB to "paid"
+                $transaction = OlEcommerceTransaction::where('invoice_number', $originalOrderId)->first();
+                if ($transaction) {
+                    $transaction->update([
+                        'status' => 'paid',
+                        'paid_at' => now(),
+                    ]);
+                }
+            } else if ($txStatus == 'deny' || $txStatus == 'cancel' || $txStatus == 'expire' || $txStatus == 'failure') {
+                // Update transaction status in DB to "failed"
+                $transaction = OlEcommerceTransaction::where('invoice_number', $originalOrderId)->first();
+                if ($transaction) {
+                    $transaction->update([
+                        'status' => 'failed',
+                    ]);
+                };
+
+                // You can handle pending status if needed
+            } else {
+                // Handle other statuses like "deny", "expire", "cancel" if needed
+            }
+        } else {
+            Log::warning("Midtrans Callback: Invalid signature key for order_id " . $request->order_id);
+            return response()->json(['message' => 'Invalid signature key'], 400);
+        }
+    }
+
+    public function getTransactionDetailByInvoice($invoice_number)
+    {
+        $transaction = OlEcommerceTransaction::where('invoice_number', $invoice_number)->first();
+
+        if (!$transaction) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Transaction not found',
+            ], 404);
+        }
+
+        // You can also load the transaction details if needed
+        $transactionDetails = OlEcommerceTransactionDetail::where('transaction_id', $transaction->id)->get();
+
+        return response()->json([
+            'data' => [
+                'success' => true,
+                'message' => 'Transaction retrieved successfully',
+                'data' => $transaction,
+                'details' => $transactionDetails, // Uncomment if you want to include details
+            ]
+        ], 200);
     }
 }
