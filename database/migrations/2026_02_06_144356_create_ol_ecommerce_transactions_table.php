@@ -42,7 +42,7 @@ return new class extends Migration
         Schema::create('ol_ecommerce_transaction_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transaction_id')->constrained('ol_ecommerce_transactions')->onDelete('cascade');
-            $table->foreignId('product_id')->constrained('products');
+            $table->foreignId('product_id')->constrained('bakpias')->onDelete('cascade');
             $table->string('product_name_snapshot');
             $table->integer('quantity');
             $table->decimal('price_per_item', 12, 2);
