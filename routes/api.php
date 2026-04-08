@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\AuthController;
 
 // Public products list
 Route::get('/bakpias', [BakpiaController::class, 'index']);
+Route::get('/products', [BakpiaController::class, 'index']);
 
 // Public auth routes
 Route::post('/register', [AuthController::class, 'register']);

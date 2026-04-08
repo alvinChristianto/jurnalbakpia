@@ -19,6 +19,7 @@ class BakpiaController extends Controller
         $products = Bakpia::query()->latest()
             ->paginate(12);
 
+        $randomDecimal = mt_rand(40, 50) / 10;
         // Map the data to ensure full image URLs are returned
         $products->getCollection()->transform(function ($product) {
             return [
@@ -28,6 +29,8 @@ class BakpiaController extends Controller
                 'price_18' => $product->price_18,
                 'created_at' => $product->created_at,
                 'updated_at' => $product->updated_at,
+                'category' => 'BAKPIA',
+                'rating' => 4.8,
             ];
         });
 
