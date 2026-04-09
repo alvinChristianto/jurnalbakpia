@@ -2,11 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OlEcommerceTransactionDetail extends Model
 {
+    use HasFactory, HasUuids;
+ 
+    public $incrementing = false;
+    protected $keyType = 'string';
     // Important: Tell Laravel the table name since it's quite long
     protected $table = 'ol_ecommerce_transaction_details';
 
@@ -32,6 +38,6 @@ class OlEcommerceTransactionDetail extends Model
      */
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Bakpia::class);
+        return $this->belongsTo(OlProduct::class);
     }
 }

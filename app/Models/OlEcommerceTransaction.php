@@ -3,12 +3,20 @@
 namespace App\Models;
 
 use App\Enums\TransactionStatus;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OlEcommerceTransaction extends Model
 {
+    use HasFactory, HasUuids;
+    protected $table = 'ol_ecommerce_transactions'; // Tell Laravel the custom table name
+
+    public $incrementing = false;
+    protected $keyType = 'string';
+    
     protected $fillable = [
         'invoice_number',
         'ol_customer_id',

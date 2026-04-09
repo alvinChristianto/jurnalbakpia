@@ -13,9 +13,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('ol_ecommerce_transactions', function (Blueprint $table) {
-            $table->id();
+           
+            $table->uuid('id')->primary();
             $table->string('invoice_number')->unique();
-            $table->foreignId('ol_customer_id')->constrained('ol_customers');
+            $table->foreignUuid('ol_customer_id')->constrained('ol_customers');
 
             $table->decimal('subtotal', 12, 2);
             $table->decimal('shipping_cost', 12, 2);
@@ -40,9 +41,9 @@ return new class extends Migration
         // ... (transaction_details remains the same)
         // We also need a Detail table to store the Bakpia items bought
         Schema::create('ol_ecommerce_transaction_details', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('transaction_id')->constrained('ol_ecommerce_transactions')->onDelete('cascade');
-            $table->unsignedBigInteger('product_id');
+            $table->uuid('id')->primary();
+            $table->foreignUuid('transaction_id')->constrained('ol_ecommerce_transactions')->onDelete('cascade');
+            $table->foreignUuid('product_id')->references('id')->on('ol_products');
             $table->string('product_name_snapshot');
             $table->integer('quantity');
             $table->decimal('price_per_item', 12, 2);
