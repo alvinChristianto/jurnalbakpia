@@ -19,6 +19,13 @@ class OlEcommerceTransactionDetailResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    
+    protected static ?string $navigationLabel = 'Detail Transaksi Online';
+    protected static ?string $navigationGroup = 'Master website ';
+
+    protected static ?string $modelLabel = 'Detail Transaksi Online';
+
+
     public static function form(Form $form): Form
     {
         return $form

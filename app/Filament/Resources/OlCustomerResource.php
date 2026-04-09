@@ -19,6 +19,12 @@ class OlCustomerResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+
+    protected static ?string $navigationLabel = 'Customer Online';
+    protected static ?string $navigationGroup = 'Master website ';
+
+    protected static ?string $modelLabel = 'Customer Online ';
+
     public static function form(Form $form): Form
     {
         return $form

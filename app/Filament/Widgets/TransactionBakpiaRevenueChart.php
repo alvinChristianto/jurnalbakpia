@@ -9,7 +9,7 @@ use Flowframe\Trend\TrendValue;
 
 class TransactionBakpiaRevenueChart extends ChartWidget
 {
-    protected static ?string $heading = 'Bakpia Revenue Chart';
+    protected static ?string $heading = 'Bakpia Jl Godean Revenue';
 
     protected function getData(): array
     {

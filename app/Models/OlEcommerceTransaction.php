@@ -29,8 +29,8 @@ class OlEcommerceTransaction extends Model
         'shipping_address_snapshot',
         'courier_name',
         'payment_method',
-        'payment_reference',
-        'payment_url',
+        'invoice_number_backend',
+        'payment_token_midtrans',
         'paid_at'
     ];
 

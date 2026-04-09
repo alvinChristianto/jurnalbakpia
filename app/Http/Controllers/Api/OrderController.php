@@ -161,8 +161,8 @@ class OrderController extends Controller
 
             // Save the Snap Token and the ID used to Midtrans into our DB
             $OlTransaction->update([
-                'payment_reference' => $midtransOrderId,
-                'payment_url' => $snapToken,
+                'invoice_number_backend' => $midtransOrderId,
+                'payment_token_midtrans' => $snapToken,
             ]);
 
             $reference = [
