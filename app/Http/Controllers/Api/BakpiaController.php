@@ -17,7 +17,7 @@ class BakpiaController extends Controller
     {
         // Fetch products that are active/available
         // We use paginate so your Next.js frontend doesn't lag if you have 100+ types of Bakpia
-        $products = OlProduct::query()->latest()
+        $products = OlProduct::where('status', 'Active')->latest()
             ->paginate(12);
 
         $randomDecimal = mt_rand(40, 50) / 10;
