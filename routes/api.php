@@ -13,6 +13,7 @@ Route::get('/products', [BakpiaController::class, 'index']);
 // Public auth routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 
 // Midtrans v1 token route without auth (for testing purposes)
 Route::post('/midtranstokenv1', [OrderController::class, 'getTokenMidtransv1']);

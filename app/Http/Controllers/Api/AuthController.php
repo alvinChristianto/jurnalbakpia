@@ -7,6 +7,7 @@ use App\Models\OlCustomer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -59,6 +60,33 @@ class AuthController extends Controller
             'user' => $customer
         ]);
     }
+
+    public function handleGoogleCallback(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'google_id' => 'required',
+        ]);
+
+        // Cari user berdasarkan email atau buat baru jika tidak ada
+        $user = OlCustomer::updateOrCreate(
+            ['email' => $request->email],
+            [
+                'name' => $request->name,
+                'google_id' => $request->google_id, // Pastikan kolom ini ada di migration users
+                'password' => Hash::make(Str::random(24)), // Dummy password
+            ]
+        );
+
+        // Buat token Sanctum (Personal Access Token)
+        $token = $user->createToken('next_auth_token')->plainTextToken;
+
+        return response()->json([
+            'access_token' => $token,
+            'user' => $user,
+        ]);
+    }
+
 
     public function logout(Request $request)
     {

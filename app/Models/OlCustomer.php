@@ -23,6 +23,7 @@ class OlCustomer extends Authenticatable
         'email',
         'password',
         'phone_number',
+        'google_id'
     ];
 
     protected $hidden = [

@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('password');
             $table->string('phone_number')->nullable(); // Useful for Bakpia delivery
+            $table->string('google_id')->nullable(); // For Google authentication
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
