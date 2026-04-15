@@ -11,8 +11,8 @@ use Laravel\Sanctum\HasApiTokens;
 class OlCustomer extends Authenticatable
 {
 
-
-    use HasFactory, HasUuids;
+    use HasApiTokens, HasFactory, HasUuids, Notifiable; // 
+    
     protected $table = 'ol_customers'; // Tell Laravel the custom table name
 
     public $incrementing = false;

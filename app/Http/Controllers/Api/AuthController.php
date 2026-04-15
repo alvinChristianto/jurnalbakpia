@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log; // Import Facade Log
+
 
 class AuthController extends Controller
 {
@@ -63,28 +65,62 @@ class AuthController extends Controller
 
     public function handleGoogleCallback(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-            'google_id' => 'required',
+        // 1. Log setiap request yang masuk
+        Log::info('Google OAuth Handshake Started', [
+            'payload' => $request->all(),
+            'ip' => $request->ip()
         ]);
+        try {
+            $request->validate([
+                'email' => 'required|email',
+                'google_id' => 'required',
+            ]);
 
-        // Cari user berdasarkan email atau buat baru jika tidak ada
-        $user = OlCustomer::updateOrCreate(
-            ['email' => $request->email],
-            [
-                'name' => $request->name,
-                'google_id' => $request->google_id, // Pastikan kolom ini ada di migration users
-                'password' => Hash::make(Str::random(24)), // Dummy password
-            ]
-        );
+            Log::info('trying to create/update OlCustomer', [
+                'payload' => $request->all()
+            ]);
 
-        // Buat token Sanctum (Personal Access Token)
-        $token = $user->createToken('next_auth_token')->plainTextToken;
+            // Cek dulu apakah user sudah ada
+            // ... di dalam fungsi callback
+            $customer = OlCustomer::where('email', $request->email)->first();
 
-        return response()->json([
-            'access_token' => $token,
-            'user' => $user,
-        ]);
+            if ($customer) {
+                $customer->update([
+                    'google_id' => $request->google_id,
+                    'name' => $request->name,
+                ]);
+            } else {
+                $customer = OlCustomer::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'google_id' => $request->google_id,
+                    'password' => Hash::make(Str::random(24)),
+                ]);
+            }
+
+            Log::info('User Resolved', ['user_id' => $customer->id]);
+
+            // 4. Generate Token Sanctum
+            $token = $customer->createToken('next_auth_token')->plainTextToken;
+
+            Log::info('Sanctum Token Generated Successfully', ['user_id' => $customer->id]);
+
+            return response()->json([
+                'access_token' => $token,
+                'user' => $customer,
+            ]);
+        } catch (\Exception $e) {
+            // 5. Log jika terjadi error (sangat penting!)
+            Log::error('Google OAuth Handshake Failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'message' => 'Authentication failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
 
