@@ -22,4 +22,16 @@ enum TransactionStatus: string
             self::CANCELLED => 'Dibatalkan',
         };
     }
+
+    public function color(): string
+    {
+        return match ($this) {
+            self::PENDING => 'gray',
+            self::PROCESSING => 'warning',
+            self::PAID => 'success',
+            self::SHIPPING => 'info',
+            self::COMPLETED => 'success',
+            self::CANCELLED => 'danger',
+        };
+    }
 }

@@ -54,14 +54,17 @@ class OlEcommerceTransactionDetailResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('transaction.id')
+                Tables\Columns\TextColumn::make('transaction.invoice_number')
+                    ->label('No Invoice')
+                    ->searchable()
                     ->numeric()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('product.id')
+                Tables\Columns\TextColumn::make('product.name')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('product_name_snapshot')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('quantity')
                     ->numeric()
                     ->sortable(),
@@ -83,6 +86,7 @@ class OlEcommerceTransactionDetailResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([

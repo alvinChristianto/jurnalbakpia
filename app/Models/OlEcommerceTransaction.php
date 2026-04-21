@@ -46,7 +46,7 @@ class OlEcommerceTransaction extends Model
         return $this->hasMany(OlEcommerceTransactionDetail::class, 'transaction_id');
     }
 
-    public function customer(): BelongsTo
+    public function olcustomer(): BelongsTo
     {
         return $this->belongsTo(OlCustomer::class, 'ol_customer_id');
     }

@@ -2,13 +2,19 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\TransactionStatus;
 use App\Filament\Resources\OlEcommerceTransactionResource\Pages;
 use App\Filament\Resources\OlEcommerceTransactionResource\RelationManagers;
 use App\Models\OlEcommerceTransaction;
+use Carbon\Carbon;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Tabs\Tab;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -69,51 +75,104 @@ class OlEcommerceTransactionResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('invoice_number')
+                    ->label('No Invoice')
+                    ->description(fn($record) => $record->olcustomer->name)
                     ->searchable(),
-                Tables\Columns\TextColumn::make('ol_customer_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('subtotal')
+                Tables\Columns\TextColumn::make('grand_total')
+                    ->label('Total Pembayaran')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('shipping_cost')
+                    ->label('Ongkos Kirim')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('service_fee')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('grand_total')
+                    ->label('Biaya Layanan')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('status')
+                    ->badge()
+
+                    ->formatStateUsing(fn(TransactionStatus $state) => $state->label())
+                    ->color(fn(TransactionStatus $state) => $state->color())
                     ->searchable(),
+
                 Tables\Columns\TextColumn::make('shipping_datetime')
                     ->dateTime()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('courier_name')
-                    ->searchable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('payment_method')
-                    ->searchable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('payment_reference')
-                    ->searchable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('payment_url')
-                    ->searchable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('paid_at')
+                    ->label('Dibayar Pada')
                     ->dateTime()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
+                    ->label('Dibuat Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Diperbarui Pada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->options([
+                        'pending' => 'Menunggu Pembayaran',
+                        'paid' => 'Sudah Dibayar',
+                        'processing' => 'Sedang Disiapkan',
+                        'shipping' => 'Dalam Pengiriman',
+                        'completed' => 'Selesai',
+                        'cancelled' => 'Dibatalkan',
+                    ]),
+                Filter::make('trx_indate_range')
+                    ->label('Periode Beli')
+                    ->form([
+                        DatePicker::make('from')
+                            ->label('Dari Tanggal')
+                            ->native(false),
+                        DatePicker::make('until')
+                            ->label('Sampai Tanggal')
+                            ->native(false),
+                    ])
+                    ->columns(2)
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['from'] ?? null,
+                                fn($query, $date) =>
+                                $query->whereDate('created_at', '>=', Carbon::parse($date))
+                            )
+                            ->when(
+                                $data['until'] ?? null,
+                                fn($query, $date) =>
+                                $query->whereDate('created_at', '<=', Carbon::parse($date))
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+
+                        if ($data['from'] ?? null) {
+                            $indicators[] = 'Dari: ' . Carbon::parse($data['from'])->format('d M Y');
+                        }
+
+                        if ($data['until'] ?? null) {
+                            $indicators[] = 'Sampai: ' . Carbon::parse($data['until'])->format('d M Y');
+                        }
+
+                        return $indicators;
+                    }),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
@@ -126,7 +185,6 @@ class OlEcommerceTransactionResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
         ];
     }
 
