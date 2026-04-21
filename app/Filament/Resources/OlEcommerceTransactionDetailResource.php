@@ -12,6 +12,9 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\OlEcommerceTransactionDetailResource\RelationManagers;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Columns\Column;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class OlEcommerceTransactionDetailResource extends Resource
 {
@@ -82,7 +85,14 @@ class OlEcommerceTransactionDetailResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([])
+            ->filters([
+                    Tables\Filters\SelectFilter::make('transaction_id')
+                        ->relationship('transaction', 'invoice_number')
+                        ->label('No Invoice'),
+                    Tables\Filters\SelectFilter::make('product_id')
+                        ->relationship('product', 'name')
+                        ->label('Product'),
+            ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
@@ -90,14 +100,30 @@ class OlEcommerceTransactionDetailResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     // Tables\Actions\DeleteBulkAction::make(),
+
+                    ExportBulkAction::make()->exports([
+                        ExcelExport::make()
+                            ->fromTable()
+                            ->withFilename(date('Y-m-d') . ' - OL E-com Transactions Detail')
+                            ->withColumns([
+                                Column::make('transaction.invoice_number')->heading('Invoice ID'),
+                                Column::make('product.name')->heading('Product Name'),
+                                Column::make('quantity')->heading('Quantity'),
+                                Column::make('price_per_item')->heading('Price Per Item'),
+                                Column::make('note')->heading('Note'),
+                                Column::make('created_at')->heading('Created At'),
+                                Column::make('updated_at')->heading('Updated At'),
+                            ]),
+                    ])
                 ]),
-            ]);
+            ])
+            ->defaultSort('created_at', 'desc')
+            ->striped();
     }
 
     public static function getRelations(): array
     {
-        return [
-        ];
+        return [];
     }
 
     public static function getPages(): array

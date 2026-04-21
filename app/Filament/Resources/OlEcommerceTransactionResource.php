@@ -18,6 +18,10 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Columns\Column;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class OlEcommerceTransactionResource extends Resource
 {
@@ -176,9 +180,28 @@ class OlEcommerceTransactionResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    // Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make(),
+
+                    ExportBulkAction::make()->exports([
+                        ExcelExport::make()
+                            ->fromTable()
+                            ->withFilename(date('Y-m-d') . ' - OL E-commerce Transactions')
+                            ->withColumns([
+                                Column::make('invoice_number')->heading('Invoice ID'),
+                                Column::make('olcustomer.name')->heading('customer Name'),
+                                Column::make('shipping_cost')->heading('Shipping Cost'),
+                                Column::make('service_fee')->heading('Service Fee'),
+                                Column::make('grand_total')->heading('Grand Total'),
+                                Column::make('status')->heading('Status'),
+                                Column::make('created_at')->heading('Created At'),
+                                Column::make('updated_at')->heading('Updated At'),
+                            ]),
+                    ])
                 ]),
-            ]);
+            ])
+
+            ->defaultSort('created_at', 'desc')
+            ->striped();
     }
 
     public static function getRelations(): array
