@@ -37,8 +37,7 @@ class OlEcommerceTransactionResource extends Resource
                     ->required()
                     ->maxLength(255),
                 Forms\Components\TextInput::make('ol_customer_id')
-                    ->required()
-                    ->numeric(),
+                    ->required(),
                 Forms\Components\TextInput::make('subtotal')
                     ->required()
                     ->numeric(),
@@ -177,7 +176,7 @@ class OlEcommerceTransactionResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    // Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -185,6 +184,7 @@ class OlEcommerceTransactionResource extends Resource
     public static function getRelations(): array
     {
         return [
+            RelationManagers\OlEcommerceTransactionDetailRelationManager::class,
         ];
     }
 
