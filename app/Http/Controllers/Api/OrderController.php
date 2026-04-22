@@ -211,7 +211,7 @@ class OrderController extends Controller
                 // Log::info("Midtrans Callback: Transaction " . json_encode($trxSendEmail));
                 // event(new TransaksiBerhasil($trxSendEmail));
                 // Mencari transaksi berdasarkan invoice_number dengan eager loading customer
-                $transaksi = OlEcommerceTransaction::with('olcustomer')
+                $transaksi = OlEcommerceTransaction::with('olcustomer', 'details')
                     ->where('invoice_number', $originalOrderId) // Pastikan variabel $invoice_number sudah didefinisikan
                     ->first();
 

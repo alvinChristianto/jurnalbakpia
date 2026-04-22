@@ -22,7 +22,7 @@ class TransaksiMail extends Mailable implements ShouldQueue
         $this->transaksi = $transaksi;
 
         if (!$this->transaksi->relationLoaded('olcustomer')) {
-            $this->transaksi->load('olcustomer');
+            $this->transaksi->load('olcustomer', 'details');
         }
     }
 
