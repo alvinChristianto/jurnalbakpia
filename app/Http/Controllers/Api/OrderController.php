@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\TransaksiBerhasil;
 use App\Http\Controllers\Controller;
 use App\Models\OlCustomer;
 use App\Models\OlEcommerceTransaction;
@@ -9,9 +10,11 @@ use App\Models\OlEcommerceTransactionDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Midtrans\Config;
 use Midtrans\Snap;
+use App\Mail\TransaksiMail;
 
 class OrderController extends Controller
 {
@@ -55,11 +58,7 @@ class OrderController extends Controller
 
         Log::info("API|getTokenMidtransv1|transactionToken-data-V1|parameter|" . $totalPrice . "|" . json_encode($customerData) . "|" . json_encode($orderDetail) . "|" . json_encode($shippingDetail));
 
-        // Create or get existing customer
-        //before OlCustomer created, make validation for email and name
-
-
-        $customer = OlCustomer::firstOrCreate(
+        $customer = OlCustomer::updateOrCreate(
             // 1. Unique attribute to check
             ['email' => $customerData['email']],
 
@@ -197,7 +196,7 @@ class OrderController extends Controller
         //get original order id
         $last_dash_pos = strrpos($request->order_id, '-');
         $originalOrderId = substr($request->order_id, 0, $last_dash_pos);
-
+        Log::info("Midtrans Callback: Received callback for order_id " . $request->order_id . " with status " . $txStatus);
         if ($hashes == $request->signature_key) {
             if ($txStatus == 'capture' || $txStatus == 'settlement') {
                 // Update transaction status in DB to "paid"
@@ -208,6 +207,28 @@ class OrderController extends Controller
                         'paid_at' => now(),
                     ]);
                 }
+                // $trxSendEmail = OlEcommerceTransaction::where('invoice_number', $originalOrderId)->first();
+                // Log::info("Midtrans Callback: Transaction " . json_encode($trxSendEmail));
+                // event(new TransaksiBerhasil($trxSendEmail));
+                // Mencari transaksi berdasarkan invoice_number dengan eager loading customer
+                $transaksi = OlEcommerceTransaction::with('olcustomer')
+                    ->where('invoice_number', $originalOrderId) // Pastikan variabel $invoice_number sudah didefinisikan
+                    ->first();
+
+                // Validasi jika transaksi tidak ditemukan
+                if (!$transaksi) {
+                    Log::error("Transaksi dengan Invoice #{$originalOrderId} tidak ditemukan!");
+                    return;
+                }
+
+                // Validasi jika relasi customer tidak ada
+                if (!$transaksi->olcustomer) {
+                    Log::error("Transaksi Invoice #{$originalOrderId} tidak memiliki data customer (ID: {$transaksi->ol_customer_id})!");
+                    return;
+                }
+                Log::info("Midtrans Callback: Sending email for transaction " . $transaksi->invoice_number . " to " . $transaksi->olcustomer->email);
+
+                Mail::to($transaksi->olcustomer->email)->send(new TransaksiMail($transaksi));
             } else if ($txStatus == 'deny' || $txStatus == 'cancel' || $txStatus == 'expire' || $txStatus == 'failure') {
                 // Update transaction status in DB to "failed"
                 $transaction = OlEcommerceTransaction::where('invoice_number', $originalOrderId)->first();
@@ -247,6 +268,23 @@ class OrderController extends Controller
                 'message' => 'Transaction retrieved successfully',
                 'data' => $transaction,
                 'details' => $transactionDetails, // Uncomment if you want to include details
+            ]
+        ], 200);
+    }
+
+    public function orderlists(Request $request)
+    {
+        $customer = $request->user();
+
+        $transactions = OlEcommerceTransaction::where('ol_customer_id', $customer->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'data' => [
+                'success' => true,
+                'message' => 'Order list retrieved successfully',
+                'orders' => $transactions
             ]
         ], 200);
     }
