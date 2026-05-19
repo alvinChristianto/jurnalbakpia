@@ -58,10 +58,18 @@ class OlEcommerceTransactionResource extends Resource
                     ->required()
                     ->maxLength(255)
                     ->default('pending'),
-                Forms\Components\DateTimePicker::make('shipping_datetime'),
+                Forms\Components\DateTimePicker::make('requested_shipping_datetime')
+                    ->label('Tanggal Pengiriman Diminta'),
                 Forms\Components\TextInput::make('shipping_address_snapshot')
                     ->required(),
                 Forms\Components\TextInput::make('courier_name')
+                    ->label('Kurir')
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('courier_service')
+                    ->label('Layanan Kurir')
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('tracking_number')
+                    ->label('No. Resi')
                     ->maxLength(255),
                 Forms\Components\TextInput::make('payment_method')
                     ->maxLength(255),
@@ -70,6 +78,10 @@ class OlEcommerceTransactionResource extends Resource
                 Forms\Components\TextInput::make('payment_url')
                     ->maxLength(255),
                 Forms\Components\DateTimePicker::make('paid_at'),
+                Forms\Components\DateTimePicker::make('shipped_at')
+                    ->label('Dikirim Pada'),
+                Forms\Components\DateTimePicker::make('completed_at')
+                    ->label('Selesai Pada'),
             ]);
     }
 
@@ -100,10 +112,29 @@ class OlEcommerceTransactionResource extends Resource
                     ->color(fn(TransactionStatus $state) => $state->color())
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('shipping_datetime')
+                Tables\Columns\TextColumn::make('requested_shipping_datetime')
+                    ->label('Tgl. Pengiriman Diminta')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('courier_name')
+                    ->label('Kurir')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('courier_service')
+                    ->label('Layanan Kurir')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('tracking_number')
+                    ->label('No. Resi')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('shipped_at')
+                    ->label('Dikirim Pada')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('completed_at')
+                    ->label('Selesai Pada')
+                    ->dateTime()
+                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('payment_method')
                     ->toggleable(isToggledHiddenByDefault: true),

@@ -25,20 +25,26 @@ class OlEcommerceTransaction extends Model
         'service_fee',
         'grand_total',
         'status',
-        'shipping_datetime',
+        'requested_shipping_datetime',
         'shipping_address_snapshot',
         'courier_name',
+        'courier_service',
+        'tracking_number',
         'payment_method',
         'invoice_number_backend',
         'payment_token_midtrans',
-        'paid_at'
+        'paid_at',
+        'shipped_at',
+        'completed_at',
     ];
 
     protected $casts = [
-        'status' => TransactionStatus::class, // Auto-casts to Enum
-        'shipping_datetime' => 'datetime',
+        'status' => TransactionStatus::class,
+        'requested_shipping_datetime' => 'datetime',
         'shipping_address_snapshot' => 'array',
         'paid_at' => 'datetime',
+        'shipped_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
     
     public function details(): HasMany

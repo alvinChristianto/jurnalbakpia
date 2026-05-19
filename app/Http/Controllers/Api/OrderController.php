@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\OlCustomer;
 use App\Models\OlEcommerceTransaction;
 use App\Models\OlEcommerceTransactionDetail;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -72,6 +73,7 @@ class OrderController extends Controller
 
         // Now you can safely get the ID
         $getIdCustomer = $customer->id;
+        $isDelivery = ($shippingDetail['type'] ?? '') === 'delivery';
         $OlTransaction = OlEcommerceTransaction::create([
             'ol_customer_id' => $getIdCustomer,
             'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
@@ -81,6 +83,15 @@ class OrderController extends Controller
             'grand_total' => $totalPrice,
             'shipping_address_snapshot' => json_encode($shippingDetail),
             'status' => 'pending',
+            'courier_name' => $isDelivery
+                ? ($shippingDetail['courier']['service'] ?? null)
+                : 'pickup',
+            'courier_service' => $isDelivery
+                ? ($shippingDetail['courier']['service_name'] ?? null)
+                : null,
+            'requested_shipping_datetime' => !$isDelivery && isset($shippingDetail['pickupDate'])
+                ? Carbon::parse($shippingDetail['pickupDate'] . ' ' . ($shippingDetail['pickupTime'] ?? '00:00'))
+                : null,
         ]);
 
         // not necessary for now
