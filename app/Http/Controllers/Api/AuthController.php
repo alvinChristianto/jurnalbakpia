@@ -16,6 +16,14 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
+        $existing = OlCustomer::where('email', $request->email)->first();
+        if ($existing && $existing->google_id) {
+            return response()->json([
+                'message' => 'Email ini sudah terdaftar melalui Google. Silakan masuk menggunakan tombol "Masuk dengan Google".',
+                'error_code' => 'google_account_exists',
+            ], 422);
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:ol_customers',
