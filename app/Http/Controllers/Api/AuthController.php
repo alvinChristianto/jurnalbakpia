@@ -136,6 +136,42 @@ class AuthController extends Controller
         return response()->json($request->user());
     }
 
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|min:3|max:255',
+        ]);
+
+        $request->user()->update(['name' => $request->name]);
+
+        return response()->json([
+            'message' => 'Profil berhasil diperbarui.',
+            'user' => $request->user()->fresh(),
+        ]);
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string|min:6',
+            'new_password' => 'required|string|min:8',
+            'new_password_confirmation' => 'required|same:new_password',
+        ]);
+
+        $customer = $request->user();
+
+        if (!Hash::check($request->current_password, $customer->password)) {
+            return response()->json([
+                'message' => 'Password saat ini tidak sesuai.',
+                'error_code' => 'wrong_current_password',
+            ], 422);
+        }
+
+        $customer->update(['password' => Hash::make($request->new_password)]);
+
+        return response()->json(['message' => 'Password berhasil diubah.']);
+    }
+
     public function logout(Request $request)
     {
         // Revoke the token that was used to authenticate the current request

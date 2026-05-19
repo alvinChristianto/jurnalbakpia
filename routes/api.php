@@ -27,6 +27,8 @@ Route::get('/transaction/{invoice_number}', [OrderController::class, 'getTransac
 // Protected checkout (Requires login)
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile',  [AuthController::class, 'me']);
+    Route::put('/profile', [AuthController::class, 'updateProfile']);
+    Route::put('/profile/password', [AuthController::class, 'updatePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('/orderlists', [OrderController::class, 'orderlists']);
