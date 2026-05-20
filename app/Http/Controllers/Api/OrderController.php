@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Events\TransaksiBerhasil;
 use App\Http\Controllers\Controller;
+use App\Services\KiriminajaService;
 use App\Models\OlCustomer;
 use App\Models\OlEcommerceTransaction;
 use App\Models\OlEcommerceTransactionDetail;
@@ -76,12 +77,12 @@ class OrderController extends Controller
         $isDelivery = ($shippingDetail['type'] ?? '') === 'delivery';
         $OlTransaction = OlEcommerceTransaction::create([
             'ol_customer_id' => $getIdCustomer,
-            'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
+            'invoice_number' => 'INV0-' . strtoupper(Str::random(8)),
             'subtotal' => $totalPrice,
             'shipping_cost' => $shippingCost,
             'service_fee' => $taxAmount,
             'grand_total' => $totalPrice,
-            'shipping_address_snapshot' => json_encode($shippingDetail),
+            'shipping_address_snapshot' => $shippingDetail,
             'status' => 'pending',
             'courier_name' => $isDelivery
                 ? ($shippingDetail['courier']['service'] ?? null)
@@ -115,9 +116,13 @@ class OrderController extends Controller
         $fourUniqDigit = strtoupper(Str::random(4));
         $midtransOrderId = $OlTransaction->invoice_number . "-" . $fourUniqDigit;
 
-
+        // return $shippingDetail;
         // You can set this to anything you want, or remove it if not needed  
-        $customField1 = "This is custom field 1";
+        if ($shippingDetail['type'] === 'delivery') {
+            $customField1 = "delivery|" . ($shippingDetail['courier']['service'] ?? '') . "|" . ($shippingDetail['courier']['service_name'] ?? '');
+        } else {
+            $customField1 = "pickup|" . ($shippingDetail['storeName'] ?? '') . "|" . ($shippingDetail['storeAddress'] ?? '');
+        }
 
         $itemDetails = collect($orderDetail)->map(function ($item) {
             return [
@@ -133,7 +138,7 @@ class OrderController extends Controller
                 'id'       => 'SHP-01',
                 'price'    => $shippingCost,
                 'quantity' => 1,
-                'name'     => 'Shipping Fee',
+                'name'     => $shippingDetail['courier']['service_name'] ?? 'shipping cost',
             ];
         }
 
@@ -143,7 +148,7 @@ class OrderController extends Controller
                 'id'       => 'TAX-01',
                 'price'    => $taxAmount,
                 'quantity' => 1,
-                'name'     => 'Tax (10%)',
+                'name'     => 'admin fee',
             ];
         }
 
@@ -158,11 +163,34 @@ class OrderController extends Controller
                 'last_name' => '', // You can split the name if needed'',
                 'email' => $customerData['email'],
                 'phone' => $customerData['nomorTelepon'] ?? '',
+                'billing_address' => [
+                    'first_name' => $customerData['namaPenerima'],
+                    'last_name' => '',
+                    'email' => $customerData['email'],
+                    'phone' => $customerData['nomorTelepon'] ?? '',
+                    'address' => $shippingDetail['fullAddress'] ?? '',
+                    'city' => $shippingDetail['city_name'] ?? '',
+                    'postal_code' => $shippingDetail['postalCode'] ?? '',
+                    'country_code' => $shippingDetail['countryCode'] ?? '',
+                ],
+                'shipping_address' => [
+                    'first_name' => $customerData['namaPenerima'],
+                    'last_name' => '',
+                    'email' => $customerData['email'],
+                    'phone' => $customerData['nomorTelepon'] ?? '',
+                    'address' => $shippingDetail['fullAddress'] ?? '',
+                    'city' => $shippingDetail['city_name'] ?? '',
+                    'postal_code' => $shippingDetail['postalCode'] ?? '',
+                    'country_code' => $shippingDetail['countryCode'] ?? '',
+                ],
             ],
             'item_details' => $itemDetails,
             'custom_field1' => $customField1,
+            'custom_field2' => "",
+
         ];
 
+        // TAMBAH DISINI, DI CUSTOMER DETAIL DITAMBAH shipping_address json lalu di fronted kirim id provice dll, llu get price seperti biasa, dan cocockkan . jika tidak cocok maka tidak valid, lalu update ke database 
         Log::info("API|getTokenMidtransv1|transactionToken-data-V1|parameter1|" . json_encode($params));
 
         // 5. Get Snap Token
@@ -218,6 +246,30 @@ class OrderController extends Controller
                         'paid_at' => now(),
                     ]);
                 }
+
+                // Guard against double-encoded legacy records (stored as json_encode'd string)
+                $shippingSnapshot = $transaction->shipping_address_snapshot;
+                if (is_string($shippingSnapshot)) {
+                    $shippingSnapshot = json_decode($shippingSnapshot, true);
+                }
+                Log::info("shhiping snapshot: " . json_encode($shippingSnapshot));
+
+
+                if (($shippingSnapshot['type'] ?? '') === 'delivery') {
+                    Log::info("Midtrans Callback: Transaction " . $transaction->invoice_number . " is a delivery order, requesting KiriminAja pickup");
+                    try {
+                        $kiriminajaResponse = (new KiriminajaService())->createExpressOrder($transaction);
+                        $transaction->update([
+                            'tracking_number' => $kiriminajaResponse['pickup_number'] ?? null,
+                        ]);
+                        Log::info("Midtrans Callback: KiriminAja pickup requested, pickup_number=" . ($kiriminajaResponse['pickup_number'] ?? 'n/a'));
+                    } catch (\Exception $e) {
+                        Log::error("Midtrans Callback: KiriminAja request_pickup failed for " . $transaction->invoice_number . ": " . $e->getMessage());
+                    }
+                } else {
+                    Log::info("Midtrans Callback: Transaction " . $transaction->invoice_number . " is a store-pickup order, no courier needed");
+                }
+
                 // $trxSendEmail = OlEcommerceTransaction::where('invoice_number', $originalOrderId)->first();
                 // Log::info("Midtrans Callback: Transaction " . json_encode($trxSendEmail));
                 // event(new TransaksiBerhasil($trxSendEmail));
