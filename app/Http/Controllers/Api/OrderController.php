@@ -60,15 +60,12 @@ class OrderController extends Controller
 
         Log::info("API|getTokenMidtransv1|transactionToken-data-V1|parameter|" . $totalPrice . "|" . json_encode($customerData) . "|" . json_encode($orderDetail) . "|" . json_encode($shippingDetail));
 
-        $customer = OlCustomer::updateOrCreate(
-            // 1. Unique attribute to check
+        $customer = OlCustomer::firstOrCreate(
             ['email' => $customerData['email']],
-
-            // 2. Data to insert if the customer doesn't exist
             [
-                'name' => $customerData['namaPenerima'],
+                'name'         => $customerData['namaPenerima'],
                 'phone_number' => $customerData['nomorTelepon'] ?? null,
-                'password' => bcrypt(Str::random(12)), // Only generated for new users
+                'password'     => bcrypt(Str::random(12)),
             ]
         );
 
