@@ -68,7 +68,7 @@ class KiriminajaService
                     'package_type_id'           => 7,//lain-lain
                 ],
             ],
-        ];commit dlu
+        ];
 
         Log::info('KiriminAja|createExpressOrder|request', [
             'invoice' => $transaction->invoice_number,
