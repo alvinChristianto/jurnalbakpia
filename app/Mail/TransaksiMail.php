@@ -24,6 +24,13 @@ class TransaksiMail extends Mailable implements ShouldQueue
         if (!$this->transaksi->relationLoaded('olcustomer')) {
             $this->transaksi->load('olcustomer', 'details');
         }
+
+        // Ensure snapshot is decoded as array (it may arrive as a string when queued)
+        if (is_string($this->transaksi->shipping_address_snapshot)) {
+            $this->transaksi->shipping_address_snapshot = json_decode(
+                $this->transaksi->shipping_address_snapshot, true
+            ) ?? [];
+        }
     }
 
     public function envelope(): Envelope

@@ -288,7 +288,7 @@ class OrderController extends Controller
                 }
                 Log::info("Midtrans Callback: Sending email for transaction " . $transaksi->invoice_number . " to " . $transaksi->olcustomer->email);
 
-                Mail::to($transaksi->olcustomer->email)->send(new TransaksiMail($transaksi));
+                Mail::to($transaksi->olcustomer->email)->sendNow(new TransaksiMail($transaksi));
             } else if ($txStatus == 'deny' || $txStatus == 'cancel' || $txStatus == 'expire' || $txStatus == 'failure') {
                 // Update transaction status in DB to "failed"
                 $transaction = OlEcommerceTransaction::where('invoice_number', $originalOrderId)->first();

@@ -33,6 +33,83 @@
                                 </tr>
                             </table>
 
+                            @php
+                                $snapshot = $transaksi->shipping_address_snapshot ?? [];
+                                $deliveryType = $snapshot['type'] ?? 'delivery';
+                            @endphp
+
+                            <h3 style="margin-top: 30px; color: #a67c00; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                                Informasi Pengiriman
+                            </h3>
+
+                            @if($deliveryType === 'pickup')
+                            {{-- ── Pickup ── --}}
+                            <table width="100%" style="margin-bottom: 10px;">
+                                <tr>
+                                    <td width="30%" style="color: #555;">Tipe</td>
+                                    <td><strong>Ambil di Toko</strong></td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #555;">Toko</td>
+                                    <td>{{ $snapshot['storeName'] ?? '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #555; vertical-align: top;">Alamat Toko</td>
+                                    <td>{{ $snapshot['storeAddress'] ?? '-' }}</td>
+                                </tr>
+                                @if(!empty($snapshot['pickupDate']))
+                                <tr>
+                                    <td style="color: #555;">Waktu Ambil</td>
+                                    <td>
+                                        {{ \Carbon\Carbon::parse($snapshot['pickupDate'])->locale('id')->isoFormat('dddd, D MMMM Y') }}
+                                        @if(!empty($snapshot['pickupTime']))
+                                            pukul {{ $snapshot['pickupTime'] }} WIB
+                                        @endif
+                                    </td>
+                                </tr>
+                                @endif
+                            </table>
+                            @else
+                            {{-- ── Delivery ── --}}
+                            <table width="100%" style="margin-bottom: 10px;">
+                                <tr>
+                                    <td width="30%" style="color: #555;">Tipe</td>
+                                    <td><strong>Dikirim ke Alamat</strong></td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #555; vertical-align: top;">Alamat</td>
+                                    <td>
+                                        {{ $snapshot['fullAddress'] ?? '-' }}
+                                        @if(!empty($snapshot['city_name']))
+                                            , {{ $snapshot['city_name'] }}
+                                        @endif
+                                        @if(!empty($snapshot['postalCode']))
+                                            {{ $snapshot['postalCode'] }}
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #555;">Kurir</td>
+                                    <td>
+                                        {{ strtoupper($transaksi->courier_name ?? '') }}
+                                        @if($transaksi->courier_service)
+                                            — {{ $transaksi->courier_service }}
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #555;">No. Resi</td>
+                                    <td>
+                                        @if($transaksi->tracking_number)
+                                            <strong>{{ $transaksi->tracking_number }}</strong>
+                                        @else
+                                            <em style="color: #999;">Sedang diproses</em>
+                                        @endif
+                                    </td>
+                                </tr>
+                            </table>
+                            @endif
+
                             <h3 style="margin-top: 30px; color: #a67c00; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                                 Detail Pesanan
                             </h3>
