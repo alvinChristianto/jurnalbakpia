@@ -83,8 +83,12 @@ Current surface (keep it small):
 | POST | `/api/auth/google/callback` | `AuthController@handleGoogleCallback` | public — issues Sanctum token |
 | POST | `/api/midtranstokenv1` | `OrderController@getTokenMidtransv1` | public (TODO: move under `auth:sanctum`) |
 | POST | `/api/midtrans-callback/` | `OrderController@handleMidtransCallback` | public (Midtrans webhook) |
+| POST | `/api/kiriminaja-callback/` | `OrderController@kiriminajaCallback` | public (KiriminAja webhook) |
 | GET | `/api/transaction/{invoice_number}` | `OrderController@getTransactionDetailByInvoice` | public |
+| GET | `/api/tracking/{invoice_number}` | `OrderController@getShippingTracking` | public — proxies to KiriminAja |
 | GET | `/api/profile` | `AuthController@me` | `auth:sanctum` |
+| PUT | `/api/profile` | `AuthController@updateProfile` | `auth:sanctum` |
+| PUT | `/api/profile/password` | `AuthController@updatePassword` | `auth:sanctum` |
 | POST | `/api/logout` | `AuthController@logout` | `auth:sanctum` |
 | GET | `/api/orderlists` | `OrderController@orderlists` | `auth:sanctum` |
 
@@ -111,7 +115,23 @@ Conventions when adding a route:
 
 - Config keys live in `.env`: `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_IS_PRODUCTION`, `MIDTRANS_IS_SANITIZED`, `MIDTRANS_IS_3DS`.
 - `OrderController::getTokenMidtransv1` builds the Snap request and returns `{ snap_token, ... }` to the frontend.
-- `OrderController::handleMidtransCallback` is the webhook — always verify the signature (`Midtrans\Notification`) before mutating order state. On success, update the matching `OlEcommerceTransaction`.
+- `OrderController::handleMidtransCallback` is the webhook — always verify the signature (`Midtrans\Notification`) before mutating order state. On success, updates the matching `OlEcommerceTransaction`, sends the invoice email (`TransaksiMail`), and triggers a KiriminAja pickup request.
+
+## Email Service
+
+- **Mailable:** `app/Mail/TransaksiMail.php` — implements `ShouldQueue`. Sends an invoice/receipt to the customer after successful payment.
+- **Template:** `resources/views/emails/transaksi.blade.php` — includes invoice number, items, shipping cost, and service fee.
+- **Trigger:** Called synchronously via `Mail::to(...)->send(new TransaksiMail($transaksi))` inside `OrderController::handleMidtransCallback` on payment success.
+- **Driver:** Mailtrap SMTP sandbox (`sandbox.smtp.mailtrap.io:2525`) — emails go to Mailtrap inbox, not real customers. Switch `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD` in `.env` to move to production (Mailgun, SES, Resend, etc.).
+- **Unused scaffolding:** `app/Events/TransaksiBerhasil.php` + `app/Listeners/KirimEmailTransaksi.php` exist as a queued event-based alternative. The event dispatch is currently commented out in `OrderController`; the direct synchronous send is the active path.
+
+## KiriminAja Integration (Backend)
+
+- **Service class:** `app/Services/KiriminajaService.php` — wraps all outbound KiriminAja API calls.
+- **Request pickup:** Triggered automatically inside `handleMidtransCallback` when payment is confirmed. Sends shipment request to KiriminAja.
+- **Callback webhook:** `POST /api/kiriminaja-callback/` (`OrderController@kiriminajaCallback`) — receives status updates from KiriminAja (e.g. picked up, in transit, delivered).
+- **Tracking:** `GET /api/tracking/{invoice_number}` (`OrderController@getShippingTracking`) — proxies the tracking query to KiriminAja and returns timeline data to the frontend.
+- The API key is server-side only (never exposed to the browser). Frontend calls `/api/kiriminaja/...` through the Next.js proxy for rate/price queries; tracking calls go through this Laravel endpoint.
 
 ## Migrations
 
@@ -127,8 +147,9 @@ The `frankenphp` binary at the repo root means this app is intended to be served
 
 ## Testing
 
-- PHPUnit configured via `phpunit.xml`. Test scaffolding is in `tests/Feature` and `tests/Unit`.
-- There are very few tests currently — when adding non-trivial business logic (pricing, stock, webhook handling), write a feature test.
+- PHPUnit configured via `phpunit.xml`. Tests live in `tests/Feature/Api/` and `tests/Unit/`.
+- Existing feature tests: `AuthTest.php`, `ProductsTest.php`, `TransactionTest.php` under `tests/Feature/Api/`.
+- When adding non-trivial business logic (pricing, stock, webhook handling), add a feature test in `tests/Feature/Api/`.
 
 ## When Adding a Feature
 
