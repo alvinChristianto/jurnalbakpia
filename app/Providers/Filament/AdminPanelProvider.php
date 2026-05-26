@@ -23,6 +23,13 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
+       $primaryColor = match (app()->environment()) {
+            'local' => Color::Purple,
+            'staging' => Color::Red,
+            'production' => Color::Orange,
+            default => Color::Amber,
+        };
+
         return $panel
             ->default()
             ->sidebarCollapsibleOnDesktop(true)
@@ -34,7 +41,8 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->font('Roboto')
             ->colors([
-                'primary' => Color::Orange,
+                // 'primary' => Color::Amber,
+                'primary' => $primaryColor,
                 'danger' => Color::Rose,
                 'gray' => Color::Gray,
                 'info' => Color::Blue,
