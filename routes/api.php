@@ -21,8 +21,13 @@ Route::post('/midtranstokenv1', [OrderController::class, 'getTokenMidtransv1']);
 // Midtrans callback route (to receive payment notifications)
 Route::post('/midtrans-callback/', [OrderController::class, 'handleMidtransCallback']);
 
+Route::post('/kiriminaja-callback/', [OrderController::class, 'kiriminajaCallback']);
+
 // get detail transaction by invoice number
 Route::get('/transaction/{invoice_number}', [OrderController::class, 'getTransactionDetailByInvoice']);
+
+// get shipping tracking by invoice number (proxies to KiriminAja)
+Route::get('/tracking/{invoice_number}', [OrderController::class, 'getShippingTracking']);
 
 // Protected checkout (Requires login)
 Route::middleware('auth:sanctum')->group(function () {

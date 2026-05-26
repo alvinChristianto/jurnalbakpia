@@ -95,4 +95,23 @@ class KiriminajaService
 
         return $data;
     }
+
+    public function getTracking(string $orderId): array
+    {
+        $response = Http::withToken(config('kiriminaja.api_key'))
+            ->timeout(15)
+            ->post(config('kiriminaja.base_url') . '/api/mitra/order/tracking', [
+                'order_id' => $orderId,
+            ]);
+
+        $data = $response->json();
+
+        Log::info('KiriminAja|getTracking', [
+            'order_id' => $orderId,
+            'status'   => $response->status(),
+            'response' => $data,
+        ]);
+
+        return $data;
+    }
 }

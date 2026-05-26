@@ -308,6 +308,13 @@ class OrderController extends Controller
         }
     }
 
+    public function kiriminajaCallback(Request $request)
+    {
+        // Handle KiriminAja callback here
+        Log::info("KiriminAja Callback: Received callback with data " . json_encode($request->all()));
+        // You can update the transaction status based on the pickup_number or other identifiers
+    }
+    
     public function getTransactionDetailByInvoice($invoice_number)
     {
         $transaction = OlEcommerceTransaction::where('invoice_number', $invoice_number)->first();
@@ -330,6 +337,33 @@ class OrderController extends Controller
                 'details' => $transactionDetails, // Uncomment if you want to include details
             ]
         ], 200);
+    }
+
+    public function getShippingTracking($invoice_number)
+    {
+        $transaction = OlEcommerceTransaction::where('invoice_number', $invoice_number)->first();
+
+        if (!$transaction) {
+            return response()->json(['success' => false, 'message' => 'Transaction not found'], 404);
+        }
+
+        if (!$transaction->tracking_number) {
+            return response()->json(['success' => false, 'message' => 'No tracking number available yet', 'tracking' => null], 200);
+        }
+
+        try {
+            $data = (new KiriminajaService())->getTracking($invoice_number);
+            return response()->json([
+                'success'  => $data['status'] ?? false,
+                'tracking' => $data,
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('OrderController|getShippingTracking|error', [
+                'invoice' => $invoice_number,
+                'error'   => $e->getMessage(),
+            ]);
+            return response()->json(['success' => false, 'message' => $e->getMessage(), 'tracking' => null], 200);
+        }
     }
 
     public function orderlists(Request $request)
