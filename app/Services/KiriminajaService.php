@@ -100,7 +100,7 @@ class KiriminajaService
     {
         $response = Http::withToken(config('kiriminaja.api_key'))
             ->timeout(15)
-            ->post(config('kiriminaja.base_url') . '/api/mitra/order/tracking', [
+            ->post(config('kiriminaja.base_url') . '/api/mitra/tracking', [
                 'order_id' => $orderId,
             ]);
 
