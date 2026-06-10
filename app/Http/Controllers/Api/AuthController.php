@@ -139,10 +139,14 @@ class AuthController extends Controller
     public function updateProfile(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|min:3|max:255',
+            'name'         => 'required|string|min:3|max:255',
+            'phone_number' => 'nullable|string|max:20',
         ]);
 
-        $request->user()->update(['name' => $request->name]);
+        $request->user()->update([
+            'name'         => $request->name,
+            'phone_number' => $request->phone_number,
+        ]);
 
         return response()->json([
             'message' => 'Profil berhasil diperbarui.',
