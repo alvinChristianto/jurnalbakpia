@@ -75,6 +75,9 @@ class KiriminajaService
             'payload' => $payload,
         ]);
 
+        // POST {KIRIMINAJA_BASE_URL}/api/mitra/request_pickup
+        // Sandbox: https://tdev.kiriminaja.com/api/mitra/request_pickup
+        // Production: https://client.kiriminaja.com/api/mitra/request_pickup
         $response = Http::withToken(config('kiriminaja.api_key'))
             ->timeout(20)
             ->post(config('kiriminaja.base_url') . '/api/mitra/request_pickup', $payload);
@@ -98,6 +101,9 @@ class KiriminajaService
 
     public function getTracking(string $orderId): array
     {
+        // POST {KIRIMINAJA_BASE_URL}/api/mitra/tracking
+        // Sandbox: https://tdev.kiriminaja.com/api/mitra/tracking
+        // Production: https://client.kiriminaja.com/api/mitra/tracking
         $response = Http::withToken(config('kiriminaja.api_key'))
             ->timeout(15)
             ->post(config('kiriminaja.base_url') . '/api/mitra/tracking', [
