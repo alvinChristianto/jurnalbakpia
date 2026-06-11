@@ -2,8 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\TransactionStatus;
 use App\Http\Controllers\Controller;
+use App\Models\OlEcommerceTransaction;
+use App\Models\OlShipmentEvent;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -16,54 +21,101 @@ use Illuminate\Support\Facades\Log;
  *   - canceled_packages  : shipment canceled
  *   - finished_packages  : package delivered
  *   - returned_packages  : package returned to sender
- *
- * For now we only log what we receive so we can inspect the real payload
- * shape before wiring it into transaction state changes.
  */
 class KiriminajaWebhookController extends Controller
 {
     public function handle(Request $request)
     {
         $method = $request->input('method');
-        $data = $request->input('data');
+        $data = $request->input('data', []);
 
         Log::info('KiriminAja Webhook: received callback', [
             'method' => $method,
             'payload' => $request->all(),
         ]);
 
-        switch ($method) {
-            case 'processed_packages':
-                Log::info('KiriminAja Webhook: processed_packages (AWB created)', ['data' => $data]);
-                break;
-
-            case 'shipped_packages':
-                Log::info('KiriminAja Webhook: shipped_packages (picked up / in transit)', ['data' => $data]);
-                break;
-
-            case 'canceled_packages':
-                Log::info('KiriminAja Webhook: canceled_packages (shipment canceled)', ['data' => $data]);
-                break;
-
-            case 'finished_packages':
-                Log::info('KiriminAja Webhook: finished_packages (delivered)', ['data' => $data]);
-                break;
-
-            case 'returned_packages':
-                Log::info('KiriminAja Webhook: returned_packages (returned to sender)', ['data' => $data]);
-                break;
-
-            default:
-                Log::warning('KiriminAja Webhook: unknown method received', [
-                    'method' => $method,
-                    'payload' => $request->all(),
-                ]);
-                break;
+        foreach ($data as $item) {
+            $this->processItem($method, $item, $request->all());
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Webhook received',
         ], 200);
+    }
+
+    private function processItem(string $method, array $item, array $rawPayload): void
+    {
+        $invoiceNumber = $item['order_id'] ?? null;
+
+        if (! $invoiceNumber) {
+            Log::warning('KiriminAja Webhook: missing order_id in item', ['item' => $item]);
+
+            return;
+        }
+
+        $eventAt = isset($item['date']) ? Carbon::parse($item['date']) : null;
+        $shippedAt = isset($item['shipped_at']) ? Carbon::parse($item['shipped_at']) : null;
+        $finishedAt = isset($item['finished_at']) ? Carbon::parse($item['finished_at']) : null;
+        $returnedAt = isset($item['returned_at']) ? Carbon::parse($item['returned_at']) : null;
+
+        $eventType = match ($method) {
+            'processed_packages' => 'processed',
+            'shipped_packages' => 'shipped',
+            'finished_packages' => 'finished',
+            'returned_packages' => 'returned',
+            'canceled_packages' => 'canceled',
+            default => $method,
+        };
+
+        OlShipmentEvent::create([
+            'invoice_number' => $invoiceNumber,
+            'event_type' => $eventType,
+            'awb' => $item['awb'] ?? null,
+            'event_at' => $eventAt,
+            'shipped_at' => $shippedAt,
+            'finished_at' => $finishedAt,
+            'returned_at' => $returnedAt,
+            'reason' => $item['reason'] ?? null,
+            'raw_payload' => $rawPayload,
+        ]);
+
+        $transaction = OlEcommerceTransaction::where('invoice_number', $invoiceNumber)->first();
+
+        if (! $transaction) {
+            Log::warning('KiriminAja Webhook: no transaction found for invoice', [
+                'invoice_number' => $invoiceNumber,
+                'method' => $method,
+            ]);
+
+            return;
+        }
+
+        DB::transaction(function () use ($method, $transaction, $shippedAt, $finishedAt, $returnedAt) {
+            match ($method) {
+                'shipped_packages' => $transaction->update([
+                    'status' => TransactionStatus::SHIPPING,
+                    'shipped_at' => $shippedAt ?? now(),
+                ]),
+                'finished_packages' => $transaction->update([
+                    'status' => TransactionStatus::COMPLETED,
+                    'completed_at' => $finishedAt ?? now(),
+                ]),
+                'returned_packages' => $transaction->update([
+                    'status' => TransactionStatus::RETURNED,
+                    'returned_at' => $returnedAt ?? now(),
+                ]),
+                'canceled_packages' => $transaction->update([
+                    'status' => TransactionStatus::CANCELLED,
+                ]),
+                default => null,
+            };
+        });
+
+        Log::info('KiriminAja Webhook: transaction updated', [
+            'invoice_number' => $invoiceNumber,
+            'method' => $method,
+            'status' => $transaction->fresh()->status,
+        ]);
     }
 }

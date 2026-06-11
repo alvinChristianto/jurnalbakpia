@@ -12,11 +12,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class OlEcommerceTransaction extends Model
 {
     use HasFactory, HasUuids;
+
     protected $table = 'ol_ecommerce_transactions'; // Tell Laravel the custom table name
 
     public $incrementing = false;
+
     protected $keyType = 'string';
-    
+
     protected $fillable = [
         'invoice_number',
         'ol_customer_id',
@@ -36,6 +38,7 @@ class OlEcommerceTransaction extends Model
         'paid_at',
         'shipped_at',
         'completed_at',
+        'returned_at',
     ];
 
     protected $casts = [
@@ -45,8 +48,9 @@ class OlEcommerceTransaction extends Model
         'paid_at' => 'datetime',
         'shipped_at' => 'datetime',
         'completed_at' => 'datetime',
+        'returned_at' => 'datetime',
     ];
-    
+
     public function details(): HasMany
     {
         return $this->hasMany(OlEcommerceTransactionDetail::class, 'transaction_id');

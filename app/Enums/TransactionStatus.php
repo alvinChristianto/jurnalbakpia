@@ -10,6 +10,7 @@ enum TransactionStatus: string
     case SHIPPING = 'shipping';
     case COMPLETED = 'completed';
     case CANCELLED = 'cancelled';
+    case RETURNED = 'returned';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum TransactionStatus: string
             self::SHIPPING => 'Dalam Pengiriman',
             self::COMPLETED => 'Selesai',
             self::CANCELLED => 'Dibatalkan',
+            self::RETURNED => 'Dikembalikan',
         };
     }
 
@@ -32,6 +34,7 @@ enum TransactionStatus: string
             self::SHIPPING => 'info',
             self::COMPLETED => 'success',
             self::CANCELLED => 'danger',
+            self::RETURNED => 'danger',
         };
     }
 }
