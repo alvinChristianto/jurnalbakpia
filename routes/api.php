@@ -1,10 +1,10 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\BakpiaController;
-use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BakpiaController;
+use App\Http\Controllers\Api\KiriminajaWebhookController;
+use App\Http\Controllers\Api\OrderController;
+use Illuminate\Support\Facades\Route;
 
 // Public products list
 Route::get('/bakpias', [BakpiaController::class, 'index']);
@@ -21,7 +21,8 @@ Route::post('/midtranstokenv1', [OrderController::class, 'getTokenMidtransv1']);
 // Midtrans callback route (to receive payment notifications)
 Route::post('/midtrans-callback/', [OrderController::class, 'handleMidtransCallback']);
 
-Route::post('/kiriminaja-callback/', [OrderController::class, 'kiriminajaCallback']);
+// KiriminAja delivery status webhook (processed/shipped/canceled/finished/returned)
+Route::post('/kiriminaja-callback/', [KiriminajaWebhookController::class, 'handle']);
 
 // get detail transaction by invoice number
 Route::get('/transaction/{invoice_number}', [OrderController::class, 'getTransactionDetailByInvoice']);
@@ -31,14 +32,13 @@ Route::get('/tracking/{invoice_number}', [OrderController::class, 'getShippingTr
 
 // Protected checkout (Requires login)
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/profile',  [AuthController::class, 'me']);
+    Route::get('/profile', [AuthController::class, 'me']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
     Route::put('/profile/password', [AuthController::class, 'updatePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('/orderlists', [OrderController::class, 'orderlists']);
 
-
     // Checkout route
-    //Route::post('/midtranstokenv1', [OrderController::class, 'getTokenMidtransv1']);
+    // Route::post('/midtranstokenv1', [OrderController::class, 'getTokenMidtransv1']);
 });

@@ -308,13 +308,6 @@ class OrderController extends Controller
         }
     }
 
-    public function kiriminajaCallback(Request $request)
-    {
-        // Handle KiriminAja callback here
-        Log::info("KiriminAja Callback: Received callback with data " . json_encode($request->all()));
-        // You can update the transaction status based on the pickup_number or other identifiers
-    }
-    
     public function getTransactionDetailByInvoice($invoice_number)
     {
         $transaction = OlEcommerceTransaction::where('invoice_number', $invoice_number)->first();
