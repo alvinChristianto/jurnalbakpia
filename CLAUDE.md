@@ -51,25 +51,40 @@ php artisan pail       # Tail logs
 
 ## Domain Model — the "two worlds"
 
-The schema reflects that this is both an internal ERP and an e-commerce backend. Don't confuse them.
+The schema reflects that this is both an internal ERP and an e-commerce backend. Don't confuse them. **Every** model below has a matching Filament Resource under `app/Filament/Resources/` (admin screen), plus `User` (admin accounts, filament-shield roles).
 
-**Internal operations (offline / wholesale):**
-- `Bakpia` — product master
-- `BakpiaProduction` — daily production batches
-- `BakpiaStock` — on-hand stock per outlet
-- `BakpiaShipment` — internal shipments between outlets
-- `BakpiaTransaction` — offline/POS-style sales
-- `Outlet` — physical store locations
-- `Customer` — offline/wholesale customers
-- `Payment` — payment records for offline transactions
-- `OtherProduct`, `OtherProductTransaction` — non-bakpia merchandise
+### Internal operations (offline / wholesale — Filament only)
 
-**Online e-commerce (consumed by FE-bakpia):**
-- `OlProduct` — products exposed via the public API
-- `OlCustomer` — storefront customers (Google OAuth users)
-- `OlEcommerceTransaction`, `OlEcommerceTransactionDetail` — online orders
+| Model | Table / PK | Key fields | Relationships |
+|---|---|---|---|
+| `Bakpia` | `bakpias` | `name`, `price_8`, `price_18` (per-box price by variant) | `hasMany` production, shipment, stock |
+| `BakpiaProduction` | `bakpia_productions` | `production_status` (`SUCCESS`/`FAIL`), `amount`, `production_date` | `belongsTo` bakpia |
+| `BakpiaStock` | `bakpia_stocks` | `box_varian` (`box_8`/`box_18`), `status` (`STOCK_IN`/`STOCK_SOLD`/`RETURNED`), `amount`, `stock_record_date`, `id_transaction` | `belongsTo` bakpia, outlet |
+| `BakpiaShipment` | `bakpia_shipments` | `status` (`SENT`/`RETURNED`), `box_varian`, `amount`, `shipment_date` | `belongsTo` bakpia, outlet |
+| `BakpiaTransaction` | `bakpia_transactions` / `id_transaction` (string) | `transaction_detail` (JSON line items, price-snapshotted), `total_price`, `discount`, `status` (`PAID`/`REFUND`) | `belongsTo` customer, payment, outlet |
+| `Outlet` | `outlets` / `id_outlet` (string) | `type` (`OFFICIAL`/`CABIN`/`DENTES`), `name`, `phone_number`, `address` | `hasMany` bakpiaTransaction, shipment, stock, otherProductTransaction |
+| `Customer` | `customers` | offline/wholesale buyers | `hasMany` bakpiaTransaction, otherProductTransaction |
+| `Payment` | `payments` | `name`, `type` (`CASH`/`BANK`) — payment **method**, not a per-order record | `hasMany` bakpiaTransaction, otherProductTransaction |
+| `OtherProduct` | non-bakpia merchandise master | | |
+| `OtherProductTransaction` | `other_product_transactions` / `id_transaction` | same POS shape as `BakpiaTransaction` | `belongsTo` customer, payment, outlet |
 
-When adding a public API feature, prefer the `Ol*` family unless the data genuinely belongs to internal ops.
+**Stock is movement-based:** on-hand = sum of `STOCK_IN` − `STOCK_SOLD` − `RETURNED` per (outlet, bakpia, box_varian). See `BakpiaTransactionResource::calculatePricePer()` for the canonical reduction. There is no single "current quantity" column.
+
+**Pricing is snapshotted:** `BakpiaTransaction.transaction_detail` (JSON) freezes `price_per` / `price_bakpia` / `name_bakpia` per line, and `total_price` is stored. The price is computed server-side from `Bakpia.price_8`/`price_18` at creation, so it's both snapshotted and authoritative. Editing a `Bakpia` price later does not alter past transactions.
+
+### Online e-commerce (consumed by FE-bakpia)
+
+| Model | Table | Notes |
+|---|---|---|
+| `OlProduct` | `ol_products` | products exposed via the public API; `hasMany` `OlEcommerceTransactionDetail` |
+| `OlCustomer` | `ol_customers` | storefront customers (Google OAuth users) |
+| `OlEcommerceTransaction` / `OlEcommerceTransactionDetail` | `ol_ecommerce_transactions*` | online orders; UUID PKs. Detail freezes `product_name_snapshot` + `price_per_item`. ⚠️ Unlike `BakpiaTransaction`, the snapshot price is taken from the **frontend request payload** (`OrderController::getTokenMidtransv1`), not recomputed from `OlProduct` — client-supplied and currently trusted. |
+
+### Rules of thumb
+- `Bakpia*`, `Outlet`, `Customer`, `Payment`, `OtherProduct*` are **internal ops** — Filament only, never exposed via `routes/api.php`.
+- `Ol*` are **online** — reachable through the public API.
+- The two product masters (`Bakpia` vs `OlProduct`) and two customer tables (`Customer` vs `OlCustomer`) are **separate and intentional** — do not merge or cross-reference them.
+- When adding a public API feature, prefer the `Ol*` family unless the data genuinely belongs to internal ops.
 
 ## API Routing — `routes/api.php`
 
