@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\DailyRevenueChart;
 use App\Filament\Widgets\OutletRevenueChart;
 use Filament\Pages\Dashboard;
 
@@ -19,6 +20,7 @@ class RevenueChartDashboard extends Dashboard
     {
         return [
             OutletRevenueChart::class,
+            DailyRevenueChart::class,
         ];
     }
 }
