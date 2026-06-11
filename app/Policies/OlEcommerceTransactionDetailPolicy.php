@@ -2,14 +2,14 @@
 
 namespace App\Policies;
 
-use App\Models\OlEcommerceTransactionDetail;
 use App\Models\User;
+use App\Models\OlEcommerceTransactionDetail;
 use Illuminate\Auth\Access\HandlesAuthorization;
-use Illuminate\Auth\Access\Response;
 
 class OlEcommerceTransactionDetailPolicy
 {
     use HandlesAuthorization;
+
     /**
      * Determine whether the user can view any models.
      */
@@ -51,7 +51,31 @@ class OlEcommerceTransactionDetailPolicy
     }
 
     /**
-     * Determine whether the user can restore the model.
+     * Determine whether the user can bulk delete.
+     */
+    public function deleteAny(User $user): bool
+    {
+        return $user->can('delete_any_ol::ecommerce::transaction::detail');
+    }
+
+    /**
+     * Determine whether the user can permanently delete.
+     */
+    public function forceDelete(User $user, OlEcommerceTransactionDetail $olEcommerceTransactionDetail): bool
+    {
+        return $user->can('force_delete_ol::ecommerce::transaction::detail');
+    }
+
+    /**
+     * Determine whether the user can permanently bulk delete.
+     */
+    public function forceDeleteAny(User $user): bool
+    {
+        return $user->can('force_delete_any_ol::ecommerce::transaction::detail');
+    }
+
+    /**
+     * Determine whether the user can restore.
      */
     public function restore(User $user, OlEcommerceTransactionDetail $olEcommerceTransactionDetail): bool
     {
@@ -59,10 +83,26 @@ class OlEcommerceTransactionDetailPolicy
     }
 
     /**
-     * Determine whether the user can permanently delete the model.
+     * Determine whether the user can bulk restore.
      */
-    public function forceDelete(User $user, OlEcommerceTransactionDetail $olEcommerceTransactionDetail): bool
+    public function restoreAny(User $user): bool
     {
-        return $user->can('force_delete_ol::ecommerce::transaction::detail');
+        return $user->can('restore_any_ol::ecommerce::transaction::detail');
+    }
+
+    /**
+     * Determine whether the user can replicate.
+     */
+    public function replicate(User $user, OlEcommerceTransactionDetail $olEcommerceTransactionDetail): bool
+    {
+        return $user->can('replicate_ol::ecommerce::transaction::detail');
+    }
+
+    /**
+     * Determine whether the user can reorder.
+     */
+    public function reorder(User $user): bool
+    {
+        return $user->can('reorder_ol::ecommerce::transaction::detail');
     }
 }

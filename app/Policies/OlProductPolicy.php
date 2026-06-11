@@ -2,14 +2,14 @@
 
 namespace App\Policies;
 
-use App\Models\OlProduct;
 use App\Models\User;
+use App\Models\OlProduct;
 use Illuminate\Auth\Access\HandlesAuthorization;
-use Illuminate\Auth\Access\Response;
 
 class OlProductPolicy
 {
     use HandlesAuthorization;
+
     /**
      * Determine whether the user can view any models.
      */
@@ -51,7 +51,31 @@ class OlProductPolicy
     }
 
     /**
-     * Determine whether the user can restore the model.
+     * Determine whether the user can bulk delete.
+     */
+    public function deleteAny(User $user): bool
+    {
+        return $user->can('delete_any_ol::product');
+    }
+
+    /**
+     * Determine whether the user can permanently delete.
+     */
+    public function forceDelete(User $user, OlProduct $olProduct): bool
+    {
+        return $user->can('force_delete_ol::product');
+    }
+
+    /**
+     * Determine whether the user can permanently bulk delete.
+     */
+    public function forceDeleteAny(User $user): bool
+    {
+        return $user->can('force_delete_any_ol::product');
+    }
+
+    /**
+     * Determine whether the user can restore.
      */
     public function restore(User $user, OlProduct $olProduct): bool
     {
@@ -59,10 +83,26 @@ class OlProductPolicy
     }
 
     /**
-     * Determine whether the user can permanently delete the model.
+     * Determine whether the user can bulk restore.
      */
-    public function forceDelete(User $user, OlProduct $olProduct): bool
+    public function restoreAny(User $user): bool
     {
-        return $user->can('force_delete_ol::product');
+        return $user->can('restore_any_ol::product');
+    }
+
+    /**
+     * Determine whether the user can replicate.
+     */
+    public function replicate(User $user, OlProduct $olProduct): bool
+    {
+        return $user->can('replicate_ol::product');
+    }
+
+    /**
+     * Determine whether the user can reorder.
+     */
+    public function reorder(User $user): bool
+    {
+        return $user->can('reorder_ol::product');
     }
 }
