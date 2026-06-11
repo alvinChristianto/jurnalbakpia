@@ -6,6 +6,8 @@ use App\Enums\TransactionStatus;
 use App\Filament\Resources\OlEcommerceTransactionResource\Pages;
 use App\Filament\Resources\OlEcommerceTransactionResource\RelationManagers;
 use App\Models\OlEcommerceTransaction;
+use App\Services\KiriminajaService;
+use Filament\Notifications\Notification;
 use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
@@ -206,6 +208,43 @@ class OlEcommerceTransactionResource extends Resource
                     }),
             ])
             ->actions([
+                Tables\Actions\Action::make('request_kiriminaja_pickup')
+                    ->label('Buat Pickup')
+                    ->icon('heroicon-o-truck')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Buat Pickup KiriminAja')
+                    ->modalDescription('Permintaan pickup akan dikirim ke KiriminAja. Pastikan pesanan sudah disiapkan.')
+                    ->visible(fn(OlEcommerceTransaction $record): bool =>
+                        in_array($record->status->value, ['paid', 'processing'])
+                        && ($record->shipping_address_snapshot['type'] ?? '') === 'delivery'
+                        && is_null($record->tracking_number)
+                    )
+                    ->action(function (OlEcommerceTransaction $record): void {
+                        try {
+                            $service  = app(KiriminajaService::class);
+                            $response = $service->createExpressOrder($record);
+                            $kjOrderId = $response['details'][0]['kj_order_id'] ?? null;
+
+                            $record->update([
+                                'tracking_number' => $kjOrderId,
+                                'shipped_at'      => now(),
+                                'status'          => 'shipping',
+                            ]);
+
+                            Notification::make()
+                                ->title('Pickup berhasil dibuat')
+                                ->body('KJ Order ID: ' . ($kjOrderId ?? '-'))
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->title('Gagal membuat pickup')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
