@@ -278,6 +278,7 @@ class OlEcommerceTransactionResource extends Resource
     {
         return [
             RelationManagers\OlEcommerceTransactionDetailRelationManager::class,
+            RelationManagers\OlShipmentEventRelationManager::class,
         ];
     }
 
