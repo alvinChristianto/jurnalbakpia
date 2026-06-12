@@ -2,10 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OlShipmentEvent extends Model
 {
+    use HasUuids;
+
     protected $fillable = [
         'invoice_number',
         'event_type',
@@ -25,4 +29,9 @@ class OlShipmentEvent extends Model
         'finished_at' => 'datetime',
         'returned_at' => 'datetime',
     ];
+
+    public function transaction(): BelongsTo
+    {
+        return $this->belongsTo(OlEcommerceTransaction::class, 'invoice_number', 'invoice_number');
+    }
 }

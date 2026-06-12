@@ -60,4 +60,9 @@ class OlEcommerceTransaction extends Model
     {
         return $this->belongsTo(OlCustomer::class, 'ol_customer_id');
     }
+
+    public function shipmentEvents(): HasMany
+    {
+        return $this->hasMany(OlShipmentEvent::class, 'invoice_number', 'invoice_number');
+    }
 }

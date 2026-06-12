@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('ol_shipment_events', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->string('invoice_number')->index();
             $table->string('event_type');
             $table->string('awb')->nullable();
@@ -20,6 +20,11 @@ return new class extends Migration
             $table->string('reason')->nullable();
             $table->json('raw_payload');
             $table->timestamps();
+
+            $table->foreign('invoice_number')
+                ->references('invoice_number')
+                ->on('ol_ecommerce_transactions')
+                ->onDelete('cascade');
         });
     }
 
