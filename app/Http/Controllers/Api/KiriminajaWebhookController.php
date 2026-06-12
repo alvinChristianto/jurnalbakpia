@@ -35,7 +35,7 @@ class KiriminajaWebhookController extends Controller
         ]);
 
         foreach ($data as $item) {
-            $this->processItem($method, $item, $request->all());
+            $this->processItem($method, $item);
         }
 
         return response()->json([
@@ -44,7 +44,7 @@ class KiriminajaWebhookController extends Controller
         ], 200);
     }
 
-    private function processItem(string $method, array $item, array $rawPayload): void
+    private function processItem(string $method, array $item): void
     {
         $invoiceNumber = $item['order_id'] ?? null;
 
@@ -68,18 +68,6 @@ class KiriminajaWebhookController extends Controller
             default => $method,
         };
 
-        OlShipmentEvent::create([
-            'invoice_number' => $invoiceNumber,
-            'event_type' => $eventType,
-            'awb' => $item['awb'] ?? null,
-            'event_at' => $eventAt,
-            'shipped_at' => $shippedAt,
-            'finished_at' => $finishedAt,
-            'returned_at' => $returnedAt,
-            'reason' => $item['reason'] ?? null,
-            'raw_payload' => $rawPayload,
-        ]);
-
         $transaction = OlEcommerceTransaction::where('invoice_number', $invoiceNumber)->first();
 
         if (! $transaction) {
@@ -91,7 +79,19 @@ class KiriminajaWebhookController extends Controller
             return;
         }
 
-        DB::transaction(function () use ($method, $transaction, $shippedAt, $finishedAt, $returnedAt) {
+        DB::transaction(function () use ($method, $eventType, $item, $transaction, $eventAt, $shippedAt, $finishedAt, $returnedAt, $invoiceNumber) {
+            OlShipmentEvent::create([
+                'invoice_number' => $invoiceNumber,
+                'event_type' => $eventType,
+                'awb' => $item['awb'] ?? null,
+                'event_at' => $eventAt,
+                'shipped_at' => $shippedAt,
+                'finished_at' => $finishedAt,
+                'returned_at' => $returnedAt,
+                'reason' => $item['reason'] ?? null,
+                'raw_payload' => $item,
+            ]);
+
             match ($method) {
                 'shipped_packages' => $transaction->update([
                     'status' => TransactionStatus::SHIPPING,
