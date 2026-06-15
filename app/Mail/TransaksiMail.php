@@ -3,10 +3,12 @@
 namespace App\Mail;
 
 use App\Models\OlEcommerceTransaction;
+use App\Models\Outlet;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use App\Models\Transaksi;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Support\Facades\Log;
@@ -14,6 +16,8 @@ use Illuminate\Support\Facades\Log;
 class TransaksiMail extends Mailable implements ShouldQueue
 {
     use SerializesModels;
+
+    const ADMIN_CC_EMAIL = 'bakpia@gmail.com';
 
     public $transaksi;
 
@@ -35,8 +39,19 @@ class TransaksiMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
+        $cc = [new Address(self::ADMIN_CC_EMAIL)];
+
+        $snapshot = $this->transaksi->shipping_address_snapshot ?? [];
+        if (($snapshot['type'] ?? null) === 'pickup') {
+            $outletEmail = Outlet::where('name', $snapshot['storeName'] ?? null)->value('email');
+            if ($outletEmail) {
+                $cc[] = new Address($outletEmail);
+            }
+        }
+
         return new Envelope(
             subject: 'Pembayaran Berhasil | Bakpia 3 Generasi - ' . $this->transaksi->invoice_number,
+            cc: $cc,
         );
     }
 
