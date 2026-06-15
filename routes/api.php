@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/bakpias', [BakpiaController::class, 'index']);
 Route::get('/products', [BakpiaController::class, 'index']);
 
+// Public outlets list (for checkout pickup selector)
+Route::get('/outlets', [BakpiaController::class, 'outlets']);
+
 // Public auth routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);

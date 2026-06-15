@@ -10,16 +10,15 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class OutletResource extends Resource
 {
     protected static ?string $model = Outlet::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-    
+
     protected static ?string $navigationLabel = 'Outlet cabang';
+
     protected static ?string $navigationGroup = 'Master';
 
     protected static ?string $modelLabel = 'Outlet cabang';
@@ -43,6 +42,15 @@ class OutletResource extends Resource
                 Forms\Components\TextInput::make('phone_number')
                     ->tel()
                     ->required(),
+                Forms\Components\TextInput::make('email')
+                    ->email()
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('operational_day')
+                    ->placeholder('e.g. Senin–Minggu')
+                    ->maxLength(100),
+                Forms\Components\TextInput::make('operational_hour')
+                    ->placeholder('e.g. 09:00–18:00')
+                    ->maxLength(50),
             ]);
     }
 
@@ -54,6 +62,9 @@ class OutletResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('address'),
                 Tables\Columns\TextColumn::make('phone_number'),
+                Tables\Columns\TextColumn::make('email'),
+                Tables\Columns\TextColumn::make('operational_day'),
+                Tables\Columns\TextColumn::make('operational_hour'),
             ])
             ->filters([
                 //

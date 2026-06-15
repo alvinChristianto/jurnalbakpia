@@ -11,7 +11,9 @@ class Outlet extends Model
     use HasFactory;
 
     protected $table = 'outlets';
+
     protected $primaryKey = 'id_outlet';
+
     public $incrementing = false;
 
     // protected $casts = ['id_hotel' => 'string'];
@@ -22,6 +24,11 @@ class Outlet extends Model
      * @var string
      */
     protected $keyType = 'string';
+
+    protected $fillable = [
+        'name', 'type', 'address', 'phone_number', 'email',
+        'operational_day', 'operational_hour',
+    ];
 
     public function bakpiaTransaction(): HasMany
     {
@@ -42,7 +49,6 @@ class Outlet extends Model
     {
         return $this->hasMany(OtherProductTransaction::class, 'id');
     }
-
 
     // public function user(): BelongsTo
     // {

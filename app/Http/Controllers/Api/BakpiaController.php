@@ -5,8 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Bakpia;
 use App\Models\OlProduct;
-use App\Models\Product;
-use Illuminate\Http\Request;
+use App\Models\Outlet;
 
 class BakpiaController extends Controller
 {
@@ -40,7 +39,17 @@ class BakpiaController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Products retrieved successfully',
-            'data' => $products
+            'data' => $products,
         ], 200);
+    }
+
+    public function outlets(): \Illuminate\Http\JsonResponse
+    {
+        $outlets = Outlet::select([
+            'id_outlet', 'name', 'address',
+            'phone_number', 'operational_day', 'operational_hour',
+        ])->get();
+
+        return response()->json($outlets);
     }
 }
