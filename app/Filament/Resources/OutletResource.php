@@ -45,12 +45,36 @@ class OutletResource extends Resource
                 Forms\Components\TextInput::make('email')
                     ->email()
                     ->maxLength(255),
-                Forms\Components\TextInput::make('operational_day')
-                    ->placeholder('e.g. Senin–Minggu')
-                    ->maxLength(100),
-                Forms\Components\TextInput::make('operational_hour')
-                    ->placeholder('e.g. 09:00–18:00')
-                    ->maxLength(50),
+                Forms\Components\CheckboxList::make('operational_day')
+                    ->label('Hari Operasional')
+                    ->options([
+                        'Senin'   => 'Senin',
+                        'Selasa'  => 'Selasa',
+                        'Rabu'    => 'Rabu',
+                        'Kamis'   => 'Kamis',
+                        'Jumat'   => 'Jumat',
+                        'Sabtu'   => 'Sabtu',
+                        'Minggu'  => 'Minggu',
+                    ])
+                    ->columns(7),
+                Forms\Components\TextInput::make('operational_hour_start')
+                    ->label('Jam Buka')
+                    ->type('time')
+                    ->afterStateHydrated(function ($component, $record) {
+                        $hour = $record?->operational_hour;
+                        if (is_array($hour)) {
+                            $component->state($hour['start'] ?? null);
+                        }
+                    }),
+                Forms\Components\TextInput::make('operational_hour_end')
+                    ->label('Jam Tutup')
+                    ->type('time')
+                    ->afterStateHydrated(function ($component, $record) {
+                        $hour = $record?->operational_hour;
+                        if (is_array($hour)) {
+                            $component->state($hour['end'] ?? null);
+                        }
+                    }),
             ]);
     }
 
@@ -63,8 +87,12 @@ class OutletResource extends Resource
                 Tables\Columns\TextColumn::make('address'),
                 Tables\Columns\TextColumn::make('phone_number'),
                 Tables\Columns\TextColumn::make('email'),
-                Tables\Columns\TextColumn::make('operational_day'),
-                Tables\Columns\TextColumn::make('operational_hour'),
+                Tables\Columns\TextColumn::make('operational_day')
+                    ->formatStateUsing(fn ($state) => is_array($state) ? implode(', ', $state) : $state),
+                Tables\Columns\TextColumn::make('operational_hour')
+                    ->formatStateUsing(fn ($state) => is_array($state)
+                        ? (($state['start'] ?? '') . ' – ' . ($state['end'] ?? ''))
+                        : $state),
             ])
             ->filters([
                 //

@@ -25,6 +25,12 @@ class CreateOutlet extends CreateRecord
         $transformId = "outlet_" . $year . $month . $day . $randomDigits;
         $data['id_outlet'] = $transformId;
 
+        $data['operational_hour'] = [
+            'start' => $data['operational_hour_start'] ?? null,
+            'end'   => $data['operational_hour_end'] ?? null,
+        ];
+        unset($data['operational_hour_start'], $data['operational_hour_end']);
+
         return $data;
     }
 }

@@ -30,6 +30,11 @@ class Outlet extends Model
         'operational_day', 'operational_hour',
     ];
 
+    protected $casts = [
+        'operational_day'  => 'array',
+        'operational_hour' => 'array',
+    ];
+
     public function bakpiaTransaction(): HasMany
     {
         return $this->hasMany(BakpiaTransaction::class, 'id');
