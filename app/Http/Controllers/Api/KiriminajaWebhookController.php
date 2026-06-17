@@ -6,6 +6,8 @@ use App\Enums\TransactionStatus;
 use App\Http\Controllers\Controller;
 use App\Models\OlEcommerceTransaction;
 use App\Models\OlShipmentEvent;
+use App\Services\FonnteService;
+use App\Services\WhatsAppTemplate;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -117,5 +119,23 @@ class KiriminajaWebhookController extends Controller
             'method' => $method,
             'status' => $transaction->fresh()->status,
         ]);
+
+        // WhatsApp notification (Fonnte) — only on the two customer-facing events,
+        // and kept OUTSIDE the DB transaction so a Fonnte hiccup never rolls back
+        // the status update above.
+        if (in_array($method, ['shipped_packages', 'finished_packages'], true)) {
+            try {
+                $transaction->loadMissing('olcustomer');
+                $phone = $transaction->olcustomer?->phone_number;
+                if ($phone) {
+                    $message = $method === 'shipped_packages'
+                        ? WhatsAppTemplate::shipped($transaction)
+                        : WhatsAppTemplate::delivered($transaction);
+                    (new FonnteService)->sendMessage($phone, $message);
+                }
+            } catch (\Throwable $e) {
+                Log::error("KiriminAja Webhook: Fonnte WA failed for {$invoiceNumber}: {$e->getMessage()}");
+            }
+        }
     }
 }

@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Events\TransaksiBerhasil;
 use App\Http\Controllers\Controller;
-use App\Services\KiriminajaService;
+use App\Mail\TransaksiMail;
 use App\Models\OlCustomer;
 use App\Models\OlEcommerceTransaction;
 use App\Models\OlEcommerceTransactionDetail;
+use App\Services\FonnteService;
+use App\Services\KiriminajaService;
+use App\Services\WhatsAppTemplate;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +19,6 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Midtrans\Config;
 use Midtrans\Snap;
-use App\Mail\TransaksiMail;
 
 class OrderController extends Controller
 {
@@ -46,9 +48,8 @@ class OrderController extends Controller
             'total_price' => 'required|numeric|min:1',
             'shipping_address' => 'required|array',
             'shipping_cost' => 'required|numeric|min:0',
-            'tax_amount' => 'required|numeric|min:0',       //if this set to 0, then dont to send to item_details
+            'tax_amount' => 'required|numeric|min:0',       // if this set to 0, then dont to send to item_details
         ]);
-
 
         $customerData = $validated['customer_data'];
         $totalPrice = $validated['total_price'];
@@ -57,15 +58,14 @@ class OrderController extends Controller
         $shippingCost = $validated['shipping_cost'];
         $taxAmount = $validated['tax_amount'];
 
-
-        Log::info("API|getTokenMidtransv1|transactionToken-data-V1|parameter|" . $totalPrice . "|" . json_encode($customerData) . "|" . json_encode($orderDetail) . "|" . json_encode($shippingDetail));
+        Log::info('API|getTokenMidtransv1|transactionToken-data-V1|parameter|'.$totalPrice.'|'.json_encode($customerData).'|'.json_encode($orderDetail).'|'.json_encode($shippingDetail));
 
         $customer = OlCustomer::firstOrCreate(
             ['email' => $customerData['email']],
             [
-                'name'         => $customerData['namaPenerima'],
+                'name' => $customerData['namaPenerima'],
                 'phone_number' => $customerData['nomorTelepon'] ?? null,
-                'password'     => bcrypt(Str::random(12)),
+                'password' => bcrypt(Str::random(12)),
             ]
         );
 
@@ -74,7 +74,7 @@ class OrderController extends Controller
         $isDelivery = ($shippingDetail['type'] ?? '') === 'delivery';
         $OlTransaction = OlEcommerceTransaction::create([
             'ol_customer_id' => $getIdCustomer,
-            'invoice_number' => 'INV0-' . strtoupper(Str::random(8)),
+            'invoice_number' => 'INV0-'.strtoupper(Str::random(8)),
             'subtotal' => $totalPrice,
             'shipping_cost' => $shippingCost,
             'service_fee' => $taxAmount,
@@ -87,8 +87,8 @@ class OrderController extends Controller
             'courier_service' => $isDelivery
                 ? ($shippingDetail['courier']['service_name'] ?? null)
                 : null,
-            'requested_shipping_datetime' => !$isDelivery && isset($shippingDetail['pickupDate'])
-                ? Carbon::parse($shippingDetail['pickupDate'] . ' ' . ($shippingDetail['pickupTime'] ?? '00:00'))
+            'requested_shipping_datetime' => ! $isDelivery && isset($shippingDetail['pickupDate'])
+                ? Carbon::parse($shippingDetail['pickupDate'].' '.($shippingDetail['pickupTime'] ?? '00:00'))
                 : null,
         ]);
 
@@ -106,46 +106,44 @@ class OrderController extends Controller
             ]);
         }
 
-
-
         // 3. Generate the Unique Order ID for Midtrans
         // We combine your Invoice Number + 4 Random Chars to avoid "Duplicate Order ID" errors in Midtrans
         $fourUniqDigit = strtoupper(Str::random(4));
-        $midtransOrderId = $OlTransaction->invoice_number . "-" . $fourUniqDigit;
+        $midtransOrderId = $OlTransaction->invoice_number.'-'.$fourUniqDigit;
 
         // return $shippingDetail;
-        // You can set this to anything you want, or remove it if not needed  
+        // You can set this to anything you want, or remove it if not needed
         if ($shippingDetail['type'] === 'delivery') {
-            $customField1 = "delivery|" . ($shippingDetail['courier']['service'] ?? '') . "|" . ($shippingDetail['courier']['service_name'] ?? '');
+            $customField1 = 'delivery|'.($shippingDetail['courier']['service'] ?? '').'|'.($shippingDetail['courier']['service_name'] ?? '');
         } else {
-            $customField1 = "pickup|" . ($shippingDetail['storeName'] ?? '') . "|" . ($shippingDetail['storeAddress'] ?? '');
+            $customField1 = 'pickup|'.($shippingDetail['storeName'] ?? '').'|'.($shippingDetail['storeAddress'] ?? '');
         }
 
         $itemDetails = collect($orderDetail)->map(function ($item) {
             return [
-                'id'       => $item['id'],
-                'price'    => (int) $item['price'],
+                'id' => $item['id'],
+                'price' => (int) $item['price'],
                 'quantity' => (int) $item['quantity'],
-                'name'     => Str::limit($item['name'], 50),
+                'name' => Str::limit($item['name'], 50),
             ];
         })->toArray();
 
         if ($shippingCost > 0) {
             $itemDetails[] = [
-                'id'       => 'SHP-01',
-                'price'    => $shippingCost,
+                'id' => 'SHP-01',
+                'price' => $shippingCost,
                 'quantity' => 1,
-                'name'     => $shippingDetail['courier']['service_name'] ?? 'shipping cost',
+                'name' => $shippingDetail['courier']['service_name'] ?? 'shipping cost',
             ];
         }
 
         // 4. Push Tax into the array
         if ($taxAmount > 0) {
             $itemDetails[] = [
-                'id'       => 'TAX-01',
-                'price'    => $taxAmount,
+                'id' => 'TAX-01',
+                'price' => $taxAmount,
                 'quantity' => 1,
-                'name'     => 'admin fee',
+                'name' => 'admin fee',
             ];
         }
 
@@ -183,12 +181,12 @@ class OrderController extends Controller
             ],
             'item_details' => $itemDetails,
             'custom_field1' => $customField1,
-            'custom_field2' => "",
+            'custom_field2' => '',
 
         ];
 
-        // TAMBAH DISINI, DI CUSTOMER DETAIL DITAMBAH shipping_address json lalu di fronted kirim id provice dll, llu get price seperti biasa, dan cocockkan . jika tidak cocok maka tidak valid, lalu update ke database 
-        Log::info("API|getTokenMidtransv1|transactionToken-data-V1|parameter1|" . json_encode($params));
+        // TAMBAH DISINI, DI CUSTOMER DETAIL DITAMBAH shipping_address json lalu di fronted kirim id provice dll, llu get price seperti biasa, dan cocockkan . jika tidak cocok maka tidak valid, lalu update ke database
+        Log::info('API|getTokenMidtransv1|transactionToken-data-V1|parameter1|'.json_encode($params));
 
         // 5. Get Snap Token
         try {
@@ -202,21 +200,20 @@ class OrderController extends Controller
 
             $reference = [
                 'invoice_number_backend' => $midtransOrderId,
-                'payment_token_midtrans' => $snapToken // We store the token here for easy access
+                'payment_token_midtrans' => $snapToken, // We store the token here for easy access
             ];
 
             return response()->json([
                 'data' => [
                     'message' => 'Snap token generated',
                     'snap_token' => $snapToken,
-                    'reference' => $reference
-                ]
-
+                    'reference' => $reference,
+                ],
 
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Midtrans Error: ' . $e->getMessage()
+                'message' => 'Midtrans Error: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -225,14 +222,14 @@ class OrderController extends Controller
     {
         // 1. Setup Midtrans Config
         Config::$serverKey = env('MIDTRANS_SERVER_KEY');
-        $hashes = hash("sha512", $request->order_id . $request->status_code . $request->gross_amount . Config::$serverKey);
+        $hashes = hash('sha512', $request->order_id.$request->status_code.$request->gross_amount.Config::$serverKey);
 
         $txStatus = $request->transaction_status;
 
-        //get original order id
+        // get original order id
         $last_dash_pos = strrpos($request->order_id, '-');
         $originalOrderId = substr($request->order_id, 0, $last_dash_pos);
-        Log::info("Midtrans Callback: Received callback for order_id " . $request->order_id . " with status " . $txStatus);
+        Log::info('Midtrans Callback: Received callback for order_id '.$request->order_id.' with status '.$txStatus);
         if ($hashes == $request->signature_key) {
             if ($txStatus == 'capture' || $txStatus == 'settlement') {
                 // Update transaction status in DB to "paid"
@@ -249,22 +246,21 @@ class OrderController extends Controller
                 if (is_string($shippingSnapshot)) {
                     $shippingSnapshot = json_decode($shippingSnapshot, true);
                 }
-                Log::info("shhiping snapshot: " . json_encode($shippingSnapshot));
-
+                Log::info('shhiping snapshot: '.json_encode($shippingSnapshot));
 
                 if (($shippingSnapshot['type'] ?? '') === 'delivery') {
-                    Log::info("Midtrans Callback: Transaction " . $transaction->invoice_number . " is a delivery order, requesting KiriminAja pickup");
+                    Log::info('Midtrans Callback: Transaction '.$transaction->invoice_number.' is a delivery order, requesting KiriminAja pickup');
                     try {
-                        $kiriminajaResponse = (new KiriminajaService())->createExpressOrder($transaction);
+                        $kiriminajaResponse = (new KiriminajaService)->createExpressOrder($transaction);
                         $transaction->update([
                             'tracking_number' => $kiriminajaResponse['pickup_number'] ?? null,
                         ]);
-                        Log::info("Midtrans Callback: KiriminAja pickup requested, pickup_number=" . ($kiriminajaResponse['pickup_number'] ?? 'n/a'));
+                        Log::info('Midtrans Callback: KiriminAja pickup requested, pickup_number='.($kiriminajaResponse['pickup_number'] ?? 'n/a'));
                     } catch (\Exception $e) {
-                        Log::error("Midtrans Callback: KiriminAja request_pickup failed for " . $transaction->invoice_number . ": " . $e->getMessage());
+                        Log::error('Midtrans Callback: KiriminAja request_pickup failed for '.$transaction->invoice_number.': '.$e->getMessage());
                     }
                 } else {
-                    Log::info("Midtrans Callback: Transaction " . $transaction->invoice_number . " is a store-pickup order, no courier needed");
+                    Log::info('Midtrans Callback: Transaction '.$transaction->invoice_number.' is a store-pickup order, no courier needed');
                 }
 
                 // $trxSendEmail = OlEcommerceTransaction::where('invoice_number', $originalOrderId)->first();
@@ -276,34 +272,47 @@ class OrderController extends Controller
                     ->first();
 
                 // Validasi jika transaksi tidak ditemukan
-                if (!$transaksi) {
+                if (! $transaksi) {
                     Log::error("Transaksi dengan Invoice #{$originalOrderId} tidak ditemukan!");
+
                     return;
                 }
 
                 // Validasi jika relasi customer tidak ada
-                if (!$transaksi->olcustomer) {
+                if (! $transaksi->olcustomer) {
                     Log::error("Transaksi Invoice #{$originalOrderId} tidak memiliki data customer (ID: {$transaksi->ol_customer_id})!");
+
                     return;
                 }
-                Log::info("Midtrans Callback: Sending email for transaction " . $transaksi->invoice_number . " to " . $transaksi->olcustomer->email);
+                Log::info('Midtrans Callback: Sending email for transaction '.$transaksi->invoice_number.' to '.$transaksi->olcustomer->email);
 
                 Mail::to($transaksi->olcustomer->email)->sendNow(new TransaksiMail($transaksi));
-            } else if ($txStatus == 'deny' || $txStatus == 'cancel' || $txStatus == 'expire' || $txStatus == 'failure') {
+
+                // WhatsApp notification (Fonnte) — never let a send failure break the webhook.
+                try {
+                    $phone = $transaksi->olcustomer->phone_number;
+                    if ($phone) {
+                        (new FonnteService)->sendMessage($phone, WhatsAppTemplate::paymentSuccess($transaksi));
+                    }
+                } catch (\Throwable $e) {
+                    Log::error("Midtrans Callback: Fonnte WA failed for {$transaksi->invoice_number}: {$e->getMessage()}");
+                }
+            } elseif ($txStatus == 'deny' || $txStatus == 'cancel' || $txStatus == 'expire' || $txStatus == 'failure') {
                 // Update transaction status in DB to "failed"
                 $transaction = OlEcommerceTransaction::where('invoice_number', $originalOrderId)->first();
                 if ($transaction) {
                     $transaction->update([
                         'status' => 'failed',
                     ]);
-                };
+                }
 
                 // You can handle pending status if needed
             } else {
                 // Handle other statuses like "deny", "expire", "cancel" if needed
             }
         } else {
-            Log::warning("Midtrans Callback: Invalid signature key for order_id " . $request->order_id);
+            Log::warning('Midtrans Callback: Invalid signature key for order_id '.$request->order_id);
+
             return response()->json(['message' => 'Invalid signature key'], 400);
         }
     }
@@ -312,7 +321,7 @@ class OrderController extends Controller
     {
         $transaction = OlEcommerceTransaction::where('invoice_number', $invoice_number)->first();
 
-        if (!$transaction) {
+        if (! $transaction) {
             return response()->json([
                 'success' => false,
                 'message' => 'Transaction not found',
@@ -328,7 +337,7 @@ class OrderController extends Controller
                 'message' => 'Transaction retrieved successfully',
                 'data' => $transaction,
                 'details' => $transactionDetails, // Uncomment if you want to include details
-            ]
+            ],
         ], 200);
     }
 
@@ -336,25 +345,27 @@ class OrderController extends Controller
     {
         $transaction = OlEcommerceTransaction::where('invoice_number', $invoice_number)->first();
 
-        if (!$transaction) {
+        if (! $transaction) {
             return response()->json(['success' => false, 'message' => 'Transaction not found'], 404);
         }
 
-        if (!$transaction->tracking_number) {
+        if (! $transaction->tracking_number) {
             return response()->json(['success' => false, 'message' => 'No tracking number available yet', 'tracking' => null], 200);
         }
 
         try {
-            $data = (new KiriminajaService())->getTracking($invoice_number);
+            $data = (new KiriminajaService)->getTracking($invoice_number);
+
             return response()->json([
-                'success'  => $data['status'] ?? false,
+                'success' => $data['status'] ?? false,
                 'tracking' => $data,
             ], 200);
         } catch (\Exception $e) {
             Log::error('OrderController|getShippingTracking|error', [
                 'invoice' => $invoice_number,
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
+
             return response()->json(['success' => false, 'message' => $e->getMessage(), 'tracking' => null], 200);
         }
     }
@@ -371,8 +382,8 @@ class OrderController extends Controller
             'data' => [
                 'success' => true,
                 'message' => 'Order list retrieved successfully',
-                'orders' => $transactions
-            ]
+                'orders' => $transactions,
+            ],
         ], 200);
     }
 }
