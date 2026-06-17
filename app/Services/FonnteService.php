@@ -36,6 +36,11 @@ class FonnteService
             return false;
         }
 
+        Log::info('Fonnte|sendMessage|request', [
+            'target' => $target,
+            'message' => $message,
+        ]);
+
         try {
             $response = Http::withHeaders(['Authorization' => config('fonnte.token')])
                 ->asForm()
@@ -47,13 +52,16 @@ class FonnteService
 
             $data = $response->json();
 
+            $sent = $response->successful() && ($data['status'] ?? false);
+
             Log::info('Fonnte|sendMessage|response', [
                 'target' => $target,
+                'sent' => $sent,
                 'status' => $response->status(),
                 'response' => $data,
             ]);
 
-            return $response->successful() && ($data['status'] ?? false);
+            return $sent;
         } catch (\Throwable $e) {
             Log::error('Fonnte|sendMessage|exception', [
                 'target' => $target,
