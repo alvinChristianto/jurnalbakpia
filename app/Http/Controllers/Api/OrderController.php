@@ -370,6 +370,40 @@ class OrderController extends Controller
         }
     }
 
+    public function getShippingPrice(Request $request)
+    {
+        $validated = $request->validate([
+            'destination_kecamatan_id' => 'required|integer',
+            'destination_kelurahan_id' => 'required|integer',
+            'total_qty' => 'required|integer|min:1',
+            'item_value' => 'required|integer|min:0',
+        ]);
+
+        try {
+            $results = (new KiriminajaService)->getShippingPrice(
+                $validated['destination_kecamatan_id'],
+                $validated['destination_kelurahan_id'],
+                $validated['total_qty'],
+                $validated['item_value'],
+            );
+
+            return response()->json([
+                'success' => true,
+                'results' => $results,
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('OrderController|getShippingPrice|error', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'results' => [],
+            ], 502);
+        }
+    }
+
     public function orderlists(Request $request)
     {
         $customer = $request->user();

@@ -33,6 +33,9 @@ Route::get('/transaction/{invoice_number}', [OrderController::class, 'getTransac
 // get shipping tracking by invoice number (proxies to KiriminAja)
 Route::get('/tracking/{invoice_number}', [OrderController::class, 'getShippingTracking']);
 
+// get express shipping rates (price quote) — proxies to KiriminAja
+Route::post('/shipping/pricing', [OrderController::class, 'getShippingPrice']);
+
 // Protected checkout (Requires login)
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [AuthController::class, 'me']);

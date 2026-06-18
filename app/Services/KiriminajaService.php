@@ -9,6 +9,67 @@ use RuntimeException;
 
 class KiriminajaService
 {
+    /**
+     * Fetch available express shipping rates (a price quote) from KiriminAja.
+     *
+     * Origin and box dimensions come from config/kiriminaja.php so they stay the
+     * single source of truth shared with createExpressOrder() — the frontend only
+     * supplies the destination, total quantity and item value.
+     *
+     * @return array<int, array<string, mixed>> the KiriminAja `results` rate list
+     */
+    public function getShippingPrice(
+        int $destinationKecamatanId,
+        int $destinationKelurahanId,
+        int $totalQty,
+        int $itemValue
+    ): array {
+        $weight = max(1, $totalQty) * config('kiriminaja.box_weight_grams');
+        $height = max(1, $totalQty) * config('kiriminaja.box_height_cm');
+        $length = config('kiriminaja.box_length_cm');
+        $width = config('kiriminaja.box_width_cm');
+
+        $payload = [
+            'origin' => config('kiriminaja.origin_kecamatan_id'),
+            'subdistrict_origin' => config('kiriminaja.origin_kelurahan_id'),
+            'destination' => $destinationKecamatanId,
+            'subdistrict_destination' => $destinationKelurahanId,
+            'weight' => $weight,
+            'length' => $length,
+            'width' => $width,
+            'height' => $height,
+            'item_value' => $itemValue,
+            'insurance' => 1,
+            'courier' => ['jne', 'tiki'],
+        ];
+
+        Log::info('KiriminAja|getShippingPrice|request', [
+            'payload' => $payload,
+        ]);
+
+        // POST {KIRIMINAJA_BASE_URL}/api/mitra/v6.1/shipping_price
+        // Sandbox: https://tdev.kiriminaja.com/api/mitra/v6.1/shipping_price
+        // Production: https://client.kiriminaja.com/api/mitra/v6.1/shipping_price
+        $response = Http::withToken(config('kiriminaja.api_key'))
+            ->timeout(20)
+            ->post(config('kiriminaja.base_url').'/api/mitra/v6.1/shipping_price', $payload);
+
+        $data = $response->json();
+
+        Log::info('KiriminAja|getShippingPrice|response', [
+            'status' => $response->status(),
+            'response' => $data,
+        ]);
+
+        if (! $response->successful() || ! ($data['status'] ?? false)) {
+            throw new RuntimeException(
+                'KiriminAja API error: '.($data['text'] ?? $response->body())
+            );
+        }
+
+        return $data['results'] ?? [];
+    }
+
     public function createExpressOrder(OlEcommerceTransaction $transaction): array
     {
         $snapshot = $transaction->shipping_address_snapshot;
@@ -23,49 +84,49 @@ class KiriminajaService
         $transaction->loadMissing(['details', 'olcustomer']);
 
         $totalQty = $transaction->details->sum('quantity');
-        $weight   = max(1, $totalQty) * config('kiriminaja.box_weight_grams');
-        $height   = max(1, $totalQty) * config('kiriminaja.box_height_cm');
-        $length   = config('kiriminaja.box_length_cm');
-        $width    = config('kiriminaja.box_width_cm');
+        $weight = max(1, $totalQty) * config('kiriminaja.box_weight_grams');
+        $height = max(1, $totalQty) * config('kiriminaja.box_height_cm');
+        $length = config('kiriminaja.box_length_cm');
+        $width = config('kiriminaja.box_width_cm');
 
         // Snapshot is a flat structure: kecamatan_id, kelurahan_id, fullAddress, etc.
         $destinationAddress = $snapshot['fullAddress'] ?? implode(', ', array_filter([
-            $snapshot['street_detail']  ?? null,
+            $snapshot['street_detail'] ?? null,
             $snapshot['kelurahan_name'] ?? null,
             $snapshot['kecamatan_name'] ?? null,
-            $snapshot['city_name']      ?? null,
-            $snapshot['province_name']  ?? null,
+            $snapshot['city_name'] ?? null,
+            $snapshot['province_name'] ?? null,
         ]));
 
         $payload = [
-            'name'         => config('kiriminaja.sender_name'),
-            'phone'        => config('kiriminaja.sender_phone'),
-            'address'      => config('kiriminaja.sender_address'),
+            'name' => config('kiriminaja.sender_name'),
+            'phone' => config('kiriminaja.sender_phone'),
+            'address' => config('kiriminaja.sender_address'),
             'kecamatan_id' => config('kiriminaja.origin_kecamatan_id'),
             'kelurahan_id' => config('kiriminaja.origin_kelurahan_id'),
-            'schedule'     => now()->addHour()->format('Y-m-d H:i:s'),
-            'packages'     => [
+            'schedule' => now()->addHour()->format('Y-m-d H:i:s'),
+            'packages' => [
                 [
-                    'order_id'                  => $transaction->invoice_number,
-                    'destination_name'          => $transaction->olcustomer->name,
-                    'destination_phone'         => $transaction->olcustomer->phone_number,
-                    'destination_address'       => $destinationAddress,
-                    'destination_kecamatan_id'  => (int) ($snapshot['kecamatan_id'] ?? 0),
-                    'destination_kelurahan_id'  => (int) ($snapshot['kelurahan_id'] ?? 0),
-                    'destination_zipcode'       => $snapshot['postalCode'] ?? '',
-                    'weight'                    => $weight,
-                    'length'                    => $length,
-                    'width'                     => $width,
-                    'height'                    => $height,
-                    'qty'                       => 1,
-                    'item_value'                => (int) $transaction->subtotal,
-                    'item_name'                 => 'Bakpia Master',
-                    'shipping_cost'             => (int) $transaction->shipping_cost,
-                    'service'                   => $snapshot['courier']['service']      ?? '',
-                    'service_type'              => $snapshot['courier']['service_type'] ?? '',
-                    'insurance_amount'          => 0,
-                    'cod'                       => 0,
-                    'package_type_id'           => 7,//lain-lain
+                    'order_id' => $transaction->invoice_number,
+                    'destination_name' => $transaction->olcustomer->name,
+                    'destination_phone' => $transaction->olcustomer->phone_number,
+                    'destination_address' => $destinationAddress,
+                    'destination_kecamatan_id' => (int) ($snapshot['kecamatan_id'] ?? 0),
+                    'destination_kelurahan_id' => (int) ($snapshot['kelurahan_id'] ?? 0),
+                    'destination_zipcode' => $snapshot['postalCode'] ?? '',
+                    'weight' => $weight,
+                    'length' => $length,
+                    'width' => $width,
+                    'height' => $height,
+                    'qty' => 1,
+                    'item_value' => (int) $transaction->subtotal,
+                    'item_name' => 'Bakpia Master',
+                    'shipping_cost' => (int) $transaction->shipping_cost,
+                    'service' => $snapshot['courier']['service'] ?? '',
+                    'service_type' => $snapshot['courier']['service_type'] ?? '',
+                    'insurance_amount' => 0,
+                    'cod' => 0,
+                    'package_type_id' => 7, // lain-lain
                 ],
             ],
         ];
@@ -80,20 +141,20 @@ class KiriminajaService
         // Production: https://client.kiriminaja.com/api/mitra/request_pickup
         $response = Http::withToken(config('kiriminaja.api_key'))
             ->timeout(20)
-            ->post(config('kiriminaja.base_url') . '/api/mitra/v6.1/request_pickup', $payload);
-            // ->post(config('kiriminaja.base_url') . '/api/mitra/request_pickup', $payload);
+            ->post(config('kiriminaja.base_url').'/api/mitra/v6.1/request_pickup', $payload);
+        // ->post(config('kiriminaja.base_url') . '/api/mitra/request_pickup', $payload);
 
         $data = $response->json();
 
         Log::info('KiriminAja|createExpressOrder|response', [
-            'invoice'  => $transaction->invoice_number,
-            'status'   => $response->status(),
+            'invoice' => $transaction->invoice_number,
+            'status' => $response->status(),
             'response' => $data,
         ]);
 
-        if (!$response->successful() || !($data['status'] ?? false)) {
+        if (! $response->successful() || ! ($data['status'] ?? false)) {
             throw new RuntimeException(
-                'KiriminAja API error: ' . ($data['text'] ?? $response->body())
+                'KiriminAja API error: '.($data['text'] ?? $response->body())
             );
         }
 
@@ -107,7 +168,7 @@ class KiriminajaService
         // Production: https://client.kiriminaja.com/api/mitra/tracking
         $response = Http::withToken(config('kiriminaja.api_key'))
             ->timeout(15)
-            ->post(config('kiriminaja.base_url') . '/api/mitra/tracking', [
+            ->post(config('kiriminaja.base_url').'/api/mitra/tracking', [
                 'order_id' => $orderId,
             ]);
 
@@ -115,7 +176,7 @@ class KiriminajaService
 
         Log::info('KiriminAja|getTracking', [
             'order_id' => $orderId,
-            'status'   => $response->status(),
+            'status' => $response->status(),
             'response' => $data,
         ]);
 
