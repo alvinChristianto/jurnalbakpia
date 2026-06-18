@@ -80,7 +80,8 @@ class KiriminajaService
         // Production: https://client.kiriminaja.com/api/mitra/request_pickup
         $response = Http::withToken(config('kiriminaja.api_key'))
             ->timeout(20)
-            ->post(config('kiriminaja.base_url') . '/api/mitra/request_pickup', $payload);
+            ->post(config('kiriminaja.base_url') . '/api/mitra/v6.1/request_pickup', $payload);
+            // ->post(config('kiriminaja.base_url') . '/api/mitra/request_pickup', $payload);
 
         $data = $response->json();
 
