@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\OtherProductTransactionResource\Pages;
-use App\Filament\Resources\OtherProductTransactionResource\RelationManagers;
 use App\Models\Bakpia;
 use App\Models\OtherProduct;
 use App\Models\OtherProductTransaction;
@@ -24,7 +23,6 @@ use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
@@ -35,103 +33,101 @@ class OtherProductTransactionResource extends Resource
 {
     protected static ?string $model = OtherProductTransaction::class;
 
-
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $navigationLabel = 'Transaksi Produk Lain ';
+
     protected static ?string $navigationGroup = 'Produk Lain ';
 
     protected static ?string $modelLabel = 'Transaksi Produk Lain';
 
+    public static function calculatePricePer_other($idOutlet, $idBakpiaPer, $amountPer)
+    {
+        $price = 0;
+        // $stockFromGudang = BakpiaStock::all()
+        //     ->where('id_outlet', $idOutlet)
+        //     ->where('id_bakpia', $idBakpiaPer)
+        //     ->where('box_varian', $boxVarianPer)
+        //     ->where('status', 'STOCK_IN')
+        //     ->sum('amount');
 
+        // $stockSold = BakpiaStock::all()
+        //     ->where('id_outlet', $idOutlet)
+        //     ->where('id_bakpia', $idBakpiaPer)
+        //     ->where('box_varian', $boxVarianPer)
+        //     ->where('status', 'STOCK_SOLD')
+        //     ->sum('amount');
+
+        // $stockReturned = BakpiaStock::all()
+        //     ->where('id_outlet', $idOutlet)
+        //     ->where('id_bakpia', $idBakpiaPer)
+        //     ->where('box_varian', $boxVarianPer)
+        //     ->where('status', 'RETURNED')
+        //     ->sum('amount');
+
+        // $totalStock = $stockFromGudang - $stockSold - $stockReturned;
+        // $checkStockBakpia = $totalStock - $amountPer;
+
+        // Log::info($checkStockBakpia . ' | IN ' . $stockFromGudang . ' | SOLD ' . $stockSold . ' | RETN ' . $stockReturned . " || " . $amountPer);
+        // if ($checkStockBakpia < 0) {
+        //     Notification::make()
+        //         ->title('Error') // Set the title of the notification
+        //         ->body('No Bakpia Stock left | ' . $checkStockBakpia) // Set the body of the notification
+        //         ->danger() // Set the type to danger (for error)
+        //         ->send(); // Send the notification
+
+        //     // throw new \Exception('Record creation failed due to no bakpia stock left');
+
+        //     return [0, $totalStock, $checkStockBakpia];
+        // }
+
+        $price = OtherProduct::where('id', $idBakpiaPer)->value('price');
+
+        Log::info($price);
+        $price = $price * $amountPer;
+
+        return $price;
+    }
+
+    public static function dataOther($id_product)
+    {
+
+        // You can now use $selectedPacketId to fetch related data or update other fields.
+        if ($id_product) {
+            $sparepart = OtherProduct::find($id_product);
+
+            if ($sparepart) {
+                // Example: Set another TextInput named 'sparepart_price' with the selected sparepart's price
+
+                $prc = $sparepart->price;
+                Log::info($sparepart->name);
+                Log::info($prc);
+
+                return [$sparepart->name, $prc];
+            }
+        } else {
+
+            return '';
+        }
+    }
+
+    public static function calculatePrice($transactDetail)
+    {
+        $tempSumAll = 0;
+        foreach ($transactDetail as $key => $bakpiaDetail) {
+            $pricePer = $bakpiaDetail['price_per'];
+
+            $price = $pricePer;
+            Log::info($price);
+
+            $tempSumAll = $tempSumAll + $price;
+        }
+
+        return $tempSumAll;
+    }
 
     public static function form(Form $form): Form
     {
-        function calculatePricePer_other($idOutlet, $idBakpiaPer, $amountPer)
-        {
-            $price = 0;
-            // $stockFromGudang = BakpiaStock::all()
-            //     ->where('id_outlet', $idOutlet)
-            //     ->where('id_bakpia', $idBakpiaPer)
-            //     ->where('box_varian', $boxVarianPer)
-            //     ->where('status', 'STOCK_IN')
-            //     ->sum('amount');
-
-            // $stockSold = BakpiaStock::all()
-            //     ->where('id_outlet', $idOutlet)
-            //     ->where('id_bakpia', $idBakpiaPer)
-            //     ->where('box_varian', $boxVarianPer)
-            //     ->where('status', 'STOCK_SOLD')
-            //     ->sum('amount');
-
-            // $stockReturned = BakpiaStock::all()
-            //     ->where('id_outlet', $idOutlet)
-            //     ->where('id_bakpia', $idBakpiaPer)
-            //     ->where('box_varian', $boxVarianPer)
-            //     ->where('status', 'RETURNED')
-            //     ->sum('amount');
-
-            // $totalStock = $stockFromGudang - $stockSold - $stockReturned;
-            // $checkStockBakpia = $totalStock - $amountPer;
-
-            // Log::info($checkStockBakpia . ' | IN ' . $stockFromGudang . ' | SOLD ' . $stockSold . ' | RETN ' . $stockReturned . " || " . $amountPer);
-            // if ($checkStockBakpia < 0) {
-            //     Notification::make()
-            //         ->title('Error') // Set the title of the notification
-            //         ->body('No Bakpia Stock left | ' . $checkStockBakpia) // Set the body of the notification
-            //         ->danger() // Set the type to danger (for error)
-            //         ->send(); // Send the notification
-
-            //     // throw new \Exception('Record creation failed due to no bakpia stock left');
-
-            //     return [0, $totalStock, $checkStockBakpia];
-            // }
-
-
-            $price = OtherProduct::where('id', $idBakpiaPer)->value('price');
-
-            Log::info($price);
-            $price = $price * $amountPer;
-
-            return $price;
-        }
-
-        function dataOther($id_product)
-        {
-
-            // You can now use $selectedPacketId to fetch related data or update other fields.
-            if ($id_product) {
-                $sparepart = OtherProduct::find($id_product);
-
-                if ($sparepart) {
-                    // Example: Set another TextInput named 'sparepart_price' with the selected sparepart's price
-
-                    $prc =  $sparepart->price;
-                    Log::info($sparepart->name);
-                    Log::info($prc);
-                    return [$sparepart->name, $prc];
-                }
-            } else {
-
-                return "";
-            }
-        }
-
-        function calculatePrice($transactDetail)
-        {
-            $tempSumAll = 0;
-            foreach ($transactDetail as $key => $bakpiaDetail) {
-                $pricePer = $bakpiaDetail['price_per'];
-
-                $price = $pricePer;
-                Log::info($price);
-
-                $tempSumAll = $tempSumAll + $price;
-            }
-
-            return $tempSumAll;
-        }
-
         return $form
             ->schema([
                 Select::make('id_outlet')
@@ -142,6 +138,7 @@ class OtherProductTransactionResource extends Resource
 
                         if (in_array(Auth::user()->email, $adminEmail, true)) {
                             $outletName = Outlet::all()->pluck('name', 'id_outlet');
+
                             // dd($outletName);
                             return $outletName;
                         } else {
@@ -155,6 +152,7 @@ class OtherProductTransactionResource extends Resource
                                 // array_push($roleOutlets, $outletName[0]);
                                 $roleOutlets[$ids] = $outletName[0];
                             }
+
                             // dd($roleOutlets);
                             return $roleOutlets;
                         }
@@ -194,8 +192,8 @@ class OtherProductTransactionResource extends Resource
                                                 $idProd = $get('id_other_product');
                                                 $idOutlet = $get('../../id_outlet');
 
-                                                $res =  calculatePricePer_other($idOutlet, $idProd, $amountPer);
-                                                $res2 = dataOther($idProd);
+                                                $res = static::calculatePricePer_other($idOutlet, $idProd, $amountPer);
+                                                $res2 = static::dataOther($idProd);
 
                                                 $set('price_per', $res);
 
@@ -217,11 +215,9 @@ class OtherProductTransactionResource extends Resource
                                 //     ->integer()
                                 //     ->disabled(),
 
-
-
                             ])
                             ->columnSpan('full')
-                            ->columns(['md' => 3])
+                            ->columns(['md' => 3]),
                     ]),
                 Fieldset::make('Data Pembayaran')
                     ->schema([
@@ -239,7 +235,7 @@ class OtherProductTransactionResource extends Resource
                                     ->action(function (Set $set, Get $get, $state) {
                                         $transaction_detail = $get('other_transaction_detail');
 
-                                        $priceTotl =  calculatePrice($transaction_detail);
+                                        $priceTotl = static::calculatePrice($transaction_detail);
                                         Log::info($priceTotl);
                                         $set('total_price', $priceTotl);
                                     })
@@ -274,7 +270,7 @@ class OtherProductTransactionResource extends Resource
                                 Forms\Components\Select::make('gender')
                                     ->options([
                                         'L' => 'Laki-laki',
-                                        'P' => 'Perempuan'
+                                        'P' => 'Perempuan',
                                     ])
                                     ->required(),
                                 Forms\Components\Textarea::make('address')
@@ -289,9 +285,9 @@ class OtherProductTransactionResource extends Resource
                                     ->maxLength(255)
                                     ->columnSpan('full'),
 
-                            ])
+                            ]),
                     ])
-                    ->required()
+                    ->required(),
                 // ->createOptionUsing(function (array $data) {
                 //     $now = Carbon::now();
 
@@ -343,12 +339,13 @@ class OtherProductTransactionResource extends Resource
                         DatePicker::make('created_until'),
                     ])
                     ->indicateUsing(function (array $data): ?string {
-                        if (!$data['created_from'] && !$data['created_until']) {
+                        if (! $data['created_from'] && ! $data['created_until']) {
                             return null;
                         }
-                        $indicatorFrom = 'Created from ' . Carbon::parse($data['created_from'])->toFormattedDateString();
-                        $indicatorUntil = ' to ' . Carbon::parse($data['created_until'])->toFormattedDateString();
-                        return $indicatorFrom . " " . $indicatorUntil;
+                        $indicatorFrom = 'Created from '.Carbon::parse($data['created_from'])->toFormattedDateString();
+                        $indicatorUntil = ' to '.Carbon::parse($data['created_until'])->toFormattedDateString();
+
+                        return $indicatorFrom.' '.$indicatorUntil;
                     })
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
@@ -366,7 +363,7 @@ class OtherProductTransactionResource extends Resource
                     ->relationship('payment', 'name'),
                 Tables\Filters\SelectFilter::make('id_outlet')
                     ->label('Outlet')
-                    ->relationship('outlet', 'name')
+                    ->relationship('outlet', 'name'),
             ], layout: FiltersLayout::AboveContentCollapsible)
             ->actions([
                 Tables\Actions\ViewAction::make(),
