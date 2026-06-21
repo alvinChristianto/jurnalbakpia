@@ -40,6 +40,7 @@ Route::post('/shipping/pricing', [OrderController::class, 'getShippingPrice']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [AuthController::class, 'me']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
+    Route::put('/profile/phone', [AuthController::class, 'updatePhone']);
     Route::put('/profile/password', [AuthController::class, 'updatePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
 

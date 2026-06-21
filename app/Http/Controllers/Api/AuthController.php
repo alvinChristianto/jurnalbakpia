@@ -6,11 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\OlCustomer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Log; // Import Facade Log
-
+use Illuminate\Validation\ValidationException; // Import Facade Log
 
 class AuthController extends Controller
 {
@@ -43,7 +41,7 @@ class AuthController extends Controller
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $customer
+            'user' => $customer,
         ], 201);
     }
 
@@ -56,7 +54,7 @@ class AuthController extends Controller
 
         $customer = OlCustomer::where('email', $request->email)->first();
 
-        if (!$customer || !Hash::check($request->password, $customer->password)) {
+        if (! $customer || ! Hash::check($request->password, $customer->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Kredensial yang diberikan salah.'],
             ]);
@@ -67,7 +65,7 @@ class AuthController extends Controller
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $customer
+            'user' => $customer,
         ]);
     }
 
@@ -76,7 +74,7 @@ class AuthController extends Controller
         // 1. Log setiap request yang masuk
         Log::info('Google OAuth Handshake Started', [
             'payload' => $request->all(),
-            'ip' => $request->ip()
+            'ip' => $request->ip(),
         ]);
         try {
             $request->validate([
@@ -85,7 +83,7 @@ class AuthController extends Controller
             ]);
 
             Log::info('trying to create/update OlCustomer', [
-                'payload' => $request->all()
+                'payload' => $request->all(),
             ]);
 
             // Cek dulu apakah user sudah ada
@@ -121,12 +119,12 @@ class AuthController extends Controller
             // 5. Log jika terjadi error (sangat penting!)
             Log::error('Google OAuth Handshake Failed', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'message' => 'Authentication failed',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -139,17 +137,33 @@ class AuthController extends Controller
     public function updateProfile(Request $request)
     {
         $request->validate([
-            'name'         => 'required|string|min:3|max:255',
+            'name' => 'required|string|min:3|max:255',
             'phone_number' => 'nullable|string|max:20',
         ]);
 
         $request->user()->update([
-            'name'         => $request->name,
+            'name' => $request->name,
             'phone_number' => $request->phone_number,
         ]);
 
         return response()->json([
             'message' => 'Profil berhasil diperbarui.',
+            'user' => $request->user()->fresh(),
+        ]);
+    }
+
+    public function updatePhone(Request $request)
+    {
+        $validated = $request->validate([
+            'phone_number' => 'required|string|min:8|max:15',
+        ]);
+
+        $request->user()->update([
+            'phone_number' => $validated['phone_number'],
+        ]);
+
+        return response()->json([
+            'message' => 'Nomor telepon berhasil diperbarui.',
             'user' => $request->user()->fresh(),
         ]);
     }
@@ -164,7 +178,7 @@ class AuthController extends Controller
 
         $customer = $request->user();
 
-        if (!Hash::check($request->current_password, $customer->password)) {
+        if (! Hash::check($request->current_password, $customer->password)) {
             return response()->json([
                 'message' => 'Password saat ini tidak sesuai.',
                 'error_code' => 'wrong_current_password',
@@ -182,7 +196,7 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'message' => 'Berhasil keluar'
+            'message' => 'Berhasil keluar',
         ]);
     }
 }

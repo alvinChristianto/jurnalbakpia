@@ -69,6 +69,14 @@ class OrderController extends Controller
             ]
         );
 
+        // Keep stored phone in sync with what the customer entered at checkout
+        // (firstOrCreate only sets it on first creation, so returning customers
+        // would otherwise keep a stale/empty number).
+        if (! empty($customerData['nomorTelepon'])
+            && $customer->phone_number !== $customerData['nomorTelepon']) {
+            $customer->update(['phone_number' => $customerData['nomorTelepon']]);
+        }
+
         // Now you can safely get the ID
         $getIdCustomer = $customer->id;
         $isDelivery = ($shippingDetail['type'] ?? '') === 'delivery';
