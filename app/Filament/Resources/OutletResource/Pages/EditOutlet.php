@@ -16,4 +16,15 @@ class EditOutlet extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $data['operational_hour'] = [
+            'start' => $data['operational_hour_start'] ?? null,
+            'end'   => $data['operational_hour_end'] ?? null,
+        ];
+        unset($data['operational_hour_start'], $data['operational_hour_end']);
+
+        return $data;
+    }
 }

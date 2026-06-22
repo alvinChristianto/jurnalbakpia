@@ -7,13 +7,14 @@ use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
-    /**
-     * A basic test example.
-     */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_the_application_root_redirects(): void
     {
-        $response = $this->get('/');
+        // Root URL redirects to the Filament admin login.
+        $this->get('/')->assertRedirect();
+    }
 
-        $response->assertStatus(200);
+    public function test_health_endpoint_is_reachable(): void
+    {
+        $this->get('/up')->assertOk();
     }
 }
