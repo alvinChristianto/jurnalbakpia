@@ -17,6 +17,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "midtrans/midtrans-php": "^2.6",
+        "picqer/php-barcode-generator": "^3.2",
         "pxlrbt/filament-excel": "^2.4"
     },
     "require-dev": {

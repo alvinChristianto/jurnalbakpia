@@ -13,12 +13,14 @@ use App\Services\KiriminajaService;
 use App\Services\WhatsAppTemplate;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Midtrans\Config;
 use Midtrans\Snap;
+use Picqer\Barcode\BarcodeGeneratorPNG;
 
 class OrderController extends Controller
 {
@@ -376,6 +378,85 @@ class OrderController extends Controller
 
             return response()->json(['success' => false, 'message' => $e->getMessage(), 'tracking' => null], 200);
         }
+    }
+
+    public function getShippingLabel($invoice_number)
+    {
+        $transaction = OlEcommerceTransaction::with('olcustomer', 'details')
+            ->where('invoice_number', $invoice_number)
+            ->first();
+
+        if (! $transaction) {
+            abort(404, 'Transaction not found');
+        }
+
+        $printableStatuses = ['paid', 'shipping', 'completed'];
+        if (! in_array($transaction->status->value, $printableStatuses, true)
+            || $transaction->courier_name === 'pickup') {
+            abort(404, 'Shipping label not available for this order');
+        }
+
+        // Barcode value: AWB from latest shipment event → tracking_number → invoice_number.
+        $awb = $transaction->shipmentEvents()
+            ->whereNotNull('awb')
+            ->latest('event_at')
+            ->value('awb');
+        $barcodeValue = $awb ?: ($transaction->tracking_number ?: $transaction->invoice_number);
+
+        // Recipient address — same snapshot-join logic as KiriminajaService::createExpressOrder.
+        $snapshot = $transaction->shipping_address_snapshot;
+        if (is_string($snapshot)) {
+            $snapshot = json_decode($snapshot, true);
+        }
+        $snapshot = $snapshot ?: [];
+
+        $recipientAddress = $snapshot['fullAddress'] ?? implode(', ', array_filter([
+            $snapshot['street_detail'] ?? null,
+            $snapshot['kelurahan_name'] ?? null,
+            $snapshot['kecamatan_name'] ?? null,
+            $snapshot['city_name'] ?? null,
+            $snapshot['province_name'] ?? null,
+            $snapshot['postalCode'] ?? null,
+        ]));
+
+        $totalQty = max(1, (int) $transaction->details->sum('quantity'));
+        $weightGrams = $totalQty * (int) config('kiriminaja.box_weight_grams');
+
+        $items = $transaction->details
+            ->map(fn ($d) => $d->product_name_snapshot.' ×'.$d->quantity)
+            ->implode(', ');
+
+        $note = optional($transaction->details->first(fn ($d) => filled($d->note)))->note;
+
+        // Code128 barcode as PNG data-URI; DomPDF cannot draw barcodes natively.
+        $barcodeGenerator = new BarcodeGeneratorPNG;
+        $barcodePng = $barcodeGenerator->getBarcode(
+            $barcodeValue,
+            BarcodeGeneratorPNG::TYPE_CODE_128,
+            2,
+            60,
+        );
+        $barcodeDataUri = 'data:image/png;base64,'.base64_encode($barcodePng);
+
+        $pdf = App::make('dompdf.wrapper');
+        $pdf->loadView('pdf.shipping_label', [
+            'transaction' => $transaction,
+            'barcodeValue' => $barcodeValue,
+            'barcodeDataUri' => $barcodeDataUri,
+            'service' => strtoupper($transaction->courier_service ?: $transaction->courier_name),
+            'weightGrams' => $weightGrams,
+            'totalQty' => $totalQty,
+            'recipientName' => $transaction->olcustomer->name ?? '-',
+            'recipientPhone' => $transaction->olcustomer->phone_number ?? '-',
+            'recipientAddress' => $recipientAddress ?: '-',
+            'senderName' => config('kiriminaja.sender_name'),
+            'senderPhone' => config('kiriminaja.sender_phone'),
+            'senderAddress' => config('kiriminaja.sender_address'),
+            'items' => $items ?: '-',
+            'note' => $note ?: '-',
+        ])->setPaper([0, 0, 283.46, 425.20]); // 100×150mm label in PDF points
+
+        return $pdf->stream('label-'.$transaction->invoice_number.'.pdf', ['Attachment' => false]);
     }
 
     public function getShippingPrice(Request $request)

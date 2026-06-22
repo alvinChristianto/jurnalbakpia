@@ -30,6 +30,9 @@ Route::post('/kiriminaja-callback/', [KiriminajaWebhookController::class, 'handl
 // get detail transaction by invoice number
 Route::get('/transaction/{invoice_number}', [OrderController::class, 'getTransactionDetailByInvoice']);
 
+// get printable shipping label PDF (paid delivery orders only)
+Route::get('/transaction/{invoice_number}/label', [OrderController::class, 'getShippingLabel']);
+
 // get shipping tracking by invoice number (proxies to KiriminAja)
 Route::get('/tracking/{invoice_number}', [OrderController::class, 'getShippingTracking']);
 
