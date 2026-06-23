@@ -82,9 +82,13 @@ class OrderController extends Controller
         // Now you can safely get the ID
         $getIdCustomer = $customer->id;
         $isDelivery = ($shippingDetail['type'] ?? '') === 'delivery';
+        
+        // Generate invoice number prefix based on environment
+        $invoicePrefix = env('APP_ENV') === 'production' ? 'BAK-' : 'INV0-';
+        
         $OlTransaction = OlEcommerceTransaction::create([
             'ol_customer_id' => $getIdCustomer,
-            'invoice_number' => 'INV0-'.strtoupper(Str::random(8)),
+            'invoice_number' => $invoicePrefix.strtoupper(Str::random(8)),
             'subtotal' => $totalPrice,
             'shipping_cost' => $shippingCost,
             'service_fee' => $taxAmount,
