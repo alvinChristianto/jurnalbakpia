@@ -122,7 +122,11 @@ Conventions when adding a route:
 
 ## Authentication Details
 
-- **Public storefront customers** authenticate via Google OAuth on the frontend. `AuthController::handleGoogleCallback` receives the verified Google identity, upserts an `OlCustomer` (and/or `User`), and issues a Sanctum personal access token.
+- **Public storefront customers** authenticate two ways, unified per email into one `OlCustomer` identity (see `plan/plan-multiauth.md`):
+  - **Email/password** — `AuthController::register` / `login`. `ol_customers.password` is **nullable** (a Google-only customer has none — `hasPassword()` reflects this).
+  - **Google OAuth** — `AuthController::handleGoogleCallback` → `resolveGoogleLogin()`: match by social account → by email (link + verify, evict unverified-squatter password) → else create a passwordless verified account. Google identities live in **`ol_customer_social_accounts`** (`OlCustomerSocialAccount`), **not** a `google_id` column (that column was backfilled + dropped).
+  - Both issue a Sanctum token. `me` and the auth responses expose `has_password` and `email_verified_at`.
+- **Supporting flows:** email verification (`verify-email` / `email/resend-verification`, tokens in `ol_customer_email_verification_tokens`, informational — does not gate checkout), forgot/set-password (`forgot-password` / `reset-password`, tokens in `ol_customer_password_reset_tokens`, enumeration-safe), and linked-account management (`profile/linked-accounts`, unlink refuses to orphan an account). Emails use `OlCustomer{ResetPassword,VerifyEmail}Mail` with links built from `config('app.frontend_url')`.
 - **Admin users** sign in to Filament via standard Laravel auth (email/password) — they are `User` records with roles assigned by filament-shield.
 - `personal_access_tokens.tokenable_id` is **UUID**, not bigint (see migration `2026_04_15_094052_*`). When seeding or factory-building tokens, generate UUIDs.
 

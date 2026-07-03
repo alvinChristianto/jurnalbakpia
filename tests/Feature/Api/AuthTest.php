@@ -44,16 +44,21 @@ class AuthTest extends TestCase
             'email' => 'taken@example.com',
             'password' => 'password1',
         ])->assertStatus(422)
-          ->assertJsonValidationErrors('email');
+            ->assertJsonPath('error_code', 'account_exists');
     }
 
-    public function test_register_rejects_google_registered_email_with_custom_error_code(): void
+    public function test_register_on_existing_google_email_returns_account_exists(): void
     {
-        OlCustomer::create([
+        $customer = OlCustomer::create([
             'name' => 'Google User',
             'email' => 'google@example.com',
-            'password' => Hash::make('anything1'),
-            'google_id' => 'gid-123',
+            'password' => null,
+            'email_verified_at' => now(),
+        ]);
+        $customer->socialAccounts()->create([
+            'provider' => 'google',
+            'provider_user_id' => 'gid-123',
+            'provider_email' => 'google@example.com',
         ]);
 
         $this->postJson('/api/register', [
@@ -61,7 +66,7 @@ class AuthTest extends TestCase
             'email' => 'google@example.com',
             'password' => 'password1',
         ])->assertStatus(422)
-          ->assertJsonPath('error_code', 'google_account_exists');
+            ->assertJsonPath('error_code', 'account_exists');
     }
 
     public function test_register_requires_password_of_at_least_eight_chars(): void
@@ -71,7 +76,7 @@ class AuthTest extends TestCase
             'email' => 'short@example.com',
             'password' => 'short',
         ])->assertStatus(422)
-          ->assertJsonValidationErrors('password');
+            ->assertJsonValidationErrors('password');
     }
 
     public function test_login_with_valid_credentials_returns_token(): void
@@ -86,8 +91,8 @@ class AuthTest extends TestCase
             'email' => 'login@example.com',
             'password' => 'correct-password',
         ])->assertOk()
-          ->assertJsonStructure(['access_token', 'token_type', 'user'])
-          ->assertJsonPath('user.email', 'login@example.com');
+            ->assertJsonStructure(['access_token', 'token_type', 'user'])
+            ->assertJsonPath('user.email', 'login@example.com');
     }
 
     public function test_login_with_wrong_password_returns_validation_error(): void
@@ -102,7 +107,7 @@ class AuthTest extends TestCase
             'email' => 'login@example.com',
             'password' => 'wrong-password',
         ])->assertStatus(422)
-          ->assertJsonValidationErrors('email');
+            ->assertJsonValidationErrors('email');
     }
 
     public function test_profile_route_is_protected(): void
@@ -146,7 +151,7 @@ class AuthTest extends TestCase
         $this->assertSame(0, $customer->tokens()->count());
     }
 
-    public function test_google_callback_creates_new_customer_when_email_unknown(): void
+    public function test_google_callback_creates_new_passwordless_verified_customer(): void
     {
         $response = $this->postJson('/api/auth/google/callback', [
             'name' => 'Google New',
@@ -155,19 +160,27 @@ class AuthTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertJsonStructure(['access_token', 'user']);
-        $this->assertDatabaseHas('ol_customers', [
-            'email' => 'newgoogle@example.com',
-            'google_id' => 'gid-new-1',
+            ->assertJsonStructure(['access_token', 'user', 'is_new', 'needs_phone'])
+            ->assertJsonPath('is_new', true)
+            ->assertJsonPath('needs_phone', true);
+
+        $customer = OlCustomer::where('email', 'newgoogle@example.com')->first();
+        $this->assertNull($customer->password);
+        $this->assertNotNull($customer->email_verified_at);
+        $this->assertDatabaseHas('ol_customer_social_accounts', [
+            'customer_id' => $customer->id,
+            'provider' => 'google',
+            'provider_user_id' => 'gid-new-1',
         ]);
     }
 
-    public function test_google_callback_links_existing_customer(): void
+    public function test_google_callback_links_existing_customer_without_clobbering_name(): void
     {
-        OlCustomer::create([
+        $customer = OlCustomer::create([
             'name' => 'Old Name',
             'email' => 'existing@example.com',
             'password' => Hash::make('password1'),
+            'email_verified_at' => now(),
         ]);
 
         $this->postJson('/api/auth/google/callback', [
@@ -176,10 +189,15 @@ class AuthTest extends TestCase
             'google_id' => 'gid-existing',
         ])->assertOk();
 
+        $this->assertDatabaseHas('ol_customer_social_accounts', [
+            'customer_id' => $customer->id,
+            'provider' => 'google',
+            'provider_user_id' => 'gid-existing',
+        ]);
+        // Verified account with a non-empty local name keeps its edited name.
         $this->assertDatabaseHas('ol_customers', [
             'email' => 'existing@example.com',
-            'google_id' => 'gid-existing',
-            'name' => 'Updated Name',
+            'name' => 'Old Name',
         ]);
     }
 }
