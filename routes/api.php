@@ -18,6 +18,11 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 
+// Public password reset / set-password + email verification
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+Route::post('/verify-email', [AuthController::class, 'verifyEmail']);
+
 // Midtrans v1 token route without auth (for testing purposes)
 Route::post('/midtranstokenv1', [OrderController::class, 'getTokenMidtransv1']);
 
@@ -46,6 +51,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile/phone', [AuthController::class, 'updatePhone']);
     Route::put('/profile/password', [AuthController::class, 'updatePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Email verification resend + linked login methods ("Akun Tertaut")
+    Route::post('/email/resend-verification', [AuthController::class, 'resendVerification']);
+    Route::get('/profile/linked-accounts', [AuthController::class, 'getLinkedAccounts']);
+    Route::delete('/profile/linked-accounts/{provider}', [AuthController::class, 'unlinkProvider']);
 
     Route::get('/orderlists', [OrderController::class, 'orderlists']);
 

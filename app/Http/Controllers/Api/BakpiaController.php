@@ -45,7 +45,7 @@ class BakpiaController extends Controller
 
     public function outlets(): \Illuminate\Http\JsonResponse
     {
-        $outlets = Outlet::select([
+        $outlets = Outlet::official()->select([
             'id_outlet', 'name', 'address',
             'phone_number', 'operational_day', 'operational_hour',
         ])->get();

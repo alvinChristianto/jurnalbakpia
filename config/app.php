@@ -17,6 +17,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Storefront (Frontend) URL
+    |--------------------------------------------------------------------------
+    |
+    | Base URL of the Next.js storefront. Used to build absolute links in emails
+    | (password reset, email verification) that point back to the frontend.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
@@ -83,7 +95,7 @@ return [
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
     'faker_locale' => 'id_ID',
-    
+
     /*
     |--------------------------------------------------------------------------
     | Encryption Key
