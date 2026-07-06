@@ -190,12 +190,10 @@ class AuthController extends Controller
 
             $customer->update($updates);
 
-            $customer->socialAccounts()->create([
-                'provider' => 'google',
-                'provider_user_id' => $googleId,
-                'provider_email' => $email,
-                'provider_avatar' => $avatar,
-            ]);
+            OlCustomerSocialAccount::updateOrCreate(
+                ['customer_id' => $customer->id, 'provider' => 'google'],
+                ['provider_user_id' => $googleId, 'provider_email' => $email, 'provider_avatar' => $avatar],
+            );
 
             return [$customer, false];
         }
@@ -210,12 +208,10 @@ class AuthController extends Controller
             'email_verified_at' => now(),
         ]);
 
-        $customer->socialAccounts()->create([
-            'provider' => 'google',
-            'provider_user_id' => $googleId,
-            'provider_email' => $email,
-            'provider_avatar' => $avatar,
-        ]);
+        OlCustomerSocialAccount::updateOrCreate(
+            ['customer_id' => $customer->id, 'provider' => 'google'],
+            ['provider_user_id' => $googleId, 'provider_email' => $email, 'provider_avatar' => $avatar],
+        );
 
         return [$customer, true];
     }

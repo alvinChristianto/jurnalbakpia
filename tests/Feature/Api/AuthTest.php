@@ -200,4 +200,32 @@ class AuthTest extends TestCase
             'name' => 'Old Name',
         ]);
     }
+
+    public function test_google_callback_updates_provider_user_id_when_already_linked(): void
+    {
+        $customer = OlCustomer::create([
+            'name' => 'Relink User',
+            'email' => 'relink@example.com',
+            'password' => null,
+            'email_verified_at' => now(),
+        ]);
+        $customer->socialAccounts()->create([
+            'provider' => 'google',
+            'provider_user_id' => 'old-gid',
+            'provider_email' => 'relink@example.com',
+        ]);
+
+        $this->postJson('/api/auth/google/callback', [
+            'name' => 'Relink User',
+            'email' => 'relink@example.com',
+            'google_id' => 'new-gid',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('ol_customer_social_accounts', [
+            'customer_id' => $customer->id,
+            'provider' => 'google',
+            'provider_user_id' => 'new-gid',
+        ]);
+        $this->assertDatabaseCount('ol_customer_social_accounts', 1);
+    }
 }
