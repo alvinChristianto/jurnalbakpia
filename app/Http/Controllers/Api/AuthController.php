@@ -7,6 +7,7 @@ use App\Mail\OlCustomerResetPasswordMail;
 use App\Mail\OlCustomerVerifyEmailMail;
 use App\Models\OlCustomer;
 use App\Models\OlCustomerSocialAccount;
+use App\Rules\IndonesianPhoneNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +33,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255',
             'password' => 'required|string|min:8',
-            'phone_number' => 'nullable|string|max:20',
+            'phone_number' => ['nullable', 'string', 'max:20', new IndonesianPhoneNumber],
         ]);
 
         if (OlCustomer::where('email', $request->email)->exists()) {
@@ -344,7 +345,7 @@ class AuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|min:3|max:255',
-            'phone_number' => 'nullable|string|max:20',
+            'phone_number' => ['nullable', 'string', 'max:20', new IndonesianPhoneNumber],
         ]);
 
         $request->user()->update([
@@ -361,7 +362,7 @@ class AuthController extends Controller
     public function updatePhone(Request $request)
     {
         $validated = $request->validate([
-            'phone_number' => 'required|string|min:8|max:15',
+            'phone_number' => ['required', 'string', 'max:15', new IndonesianPhoneNumber],
         ]);
 
         $request->user()->update([
