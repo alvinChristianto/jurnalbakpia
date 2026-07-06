@@ -2,13 +2,12 @@
 
 namespace App\Mail;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class OlCustomerVerifyEmailMail extends Mailable implements ShouldQueue
+class OlCustomerVerifyEmailMail extends Mailable
 {
     use SerializesModels;
 
