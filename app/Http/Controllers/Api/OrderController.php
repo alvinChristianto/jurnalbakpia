@@ -8,6 +8,7 @@ use App\Mail\TransaksiMail;
 use App\Models\OlCustomer;
 use App\Models\OlEcommerceTransaction;
 use App\Models\OlEcommerceTransactionDetail;
+use App\Models\OlProduct;
 use App\Services\FonnteService;
 use App\Services\KiriminajaService;
 use App\Services\WhatsAppTemplate;
@@ -24,6 +25,22 @@ use Picqer\Barcode\BarcodeGeneratorPNG;
 
 class OrderController extends Controller
 {
+    private function calculateAdminFee(int $subtotal): int
+    {
+        return (int) min(
+            round($subtotal * config('bakpia.admin_fee_percent') / 100),
+            config('bakpia.admin_fee_max'),
+        );
+    }
+
+    public function checkoutConfig()
+    {
+        return response()->json([
+            'admin_fee_percent' => config('bakpia.admin_fee_percent'),
+            'admin_fee_max' => config('bakpia.admin_fee_max'),
+        ]);
+    }
+
     public function getTokenMidtransv1(Request $request)
     {
         // 1. Setup Midtrans Config
@@ -58,7 +75,6 @@ class OrderController extends Controller
         $orderDetail = $validated['order_items'];
         $shippingDetail = $validated['shipping_address'];
         $shippingCost = $validated['shipping_cost'];
-        $taxAmount = $validated['tax_amount'];
 
         Log::info('API|getTokenMidtransv1|transactionToken-data-V1|parameter|'.$totalPrice.'|'.json_encode($customerData).'|'.json_encode($orderDetail).'|'.json_encode($shippingDetail));
 
@@ -82,17 +98,42 @@ class OrderController extends Controller
         // Now you can safely get the ID
         $getIdCustomer = $customer->id;
         $isDelivery = ($shippingDetail['type'] ?? '') === 'delivery';
-        
+
+        // Resolve real prices from the DB — never trust $item['price'] from the client.
+        $products = OlProduct::whereIn('id', collect($orderDetail)->pluck('id'))->get()->keyBy('id');
+        foreach ($orderDetail as $item) {
+            $product = $products->get($item['id']);
+            if (! $product || strtoupper($product->status) !== 'ACTIVE') {
+                return response()->json([
+                    'message' => 'Salah satu produk tidak lagi tersedia. Silakan muat ulang halaman.',
+                    'errors' => ['order_items' => ['Produk tidak ditemukan atau tidak aktif.']],
+                ], 422);
+            }
+        }
+
+        $subtotal = (int) collect($orderDetail)->sum(
+            fn ($item) => $products->get($item['id'])->price * $item['quantity']
+        );
+        $serviceFee = $this->calculateAdminFee($subtotal);
+        $grandTotal = $subtotal + $shippingCost + $serviceFee;
+
+        if ((int) round($grandTotal) !== (int) round($totalPrice)) {
+            return response()->json([
+                'message' => 'Harga berubah, silakan muat ulang halaman.',
+                'errors' => ['price_mismatch' => ['Total pesanan tidak sesuai dengan harga terkini.']],
+            ], 422);
+        }
+
         // Generate invoice number prefix based on environment
         $invoicePrefix = env('APP_ENV') === 'production' ? 'BAK-' : 'INV0-';
-        
+
         $OlTransaction = OlEcommerceTransaction::create([
             'ol_customer_id' => $getIdCustomer,
             'invoice_number' => $invoicePrefix.strtoupper(Str::random(8)),
-            'subtotal' => $totalPrice,
+            'subtotal' => $grandTotal, // unchanged behaviour: this column mirrors the grand total, not the true subtotal (see plan-admin-fee-cap.md)
             'shipping_cost' => $shippingCost,
-            'service_fee' => $taxAmount,
-            'grand_total' => $totalPrice,
+            'service_fee' => $serviceFee,
+            'grand_total' => $grandTotal,
             'shipping_address_snapshot' => $shippingDetail,
             'status' => 'pending',
             'courier_name' => $isDelivery
@@ -115,7 +156,7 @@ class OrderController extends Controller
                 'product_id' => $item['id'],
                 'product_name_snapshot' => $item['name'],
                 'quantity' => $item['quantity'],
-                'price_per_item' => $item['price'],
+                'price_per_item' => $products->get($item['id'])->price,
                 'note' => $item['note'] ?? null,
             ]);
         }
@@ -133,10 +174,10 @@ class OrderController extends Controller
             $customField1 = 'pickup|'.($shippingDetail['storeName'] ?? '').'|'.($shippingDetail['storeAddress'] ?? '');
         }
 
-        $itemDetails = collect($orderDetail)->map(function ($item) {
+        $itemDetails = collect($orderDetail)->map(function ($item) use ($products) {
             return [
                 'id' => $item['id'],
-                'price' => (int) $item['price'],
+                'price' => (int) $products->get($item['id'])->price,
                 'quantity' => (int) $item['quantity'],
                 'name' => Str::limit($item['name'], 50),
             ];
@@ -152,10 +193,10 @@ class OrderController extends Controller
         }
 
         // 4. Push Tax into the array
-        if ($taxAmount > 0) {
+        if ($serviceFee > 0) {
             $itemDetails[] = [
                 'id' => 'TAX-01',
-                'price' => $taxAmount,
+                'price' => $serviceFee,
                 'quantity' => 1,
                 'name' => 'admin fee',
             ];
@@ -165,7 +206,7 @@ class OrderController extends Controller
         $params = [
             'transaction_details' => [
                 'order_id' => $midtransOrderId,
-                'gross_amount' => (int) $totalPrice, // Must be integer
+                'gross_amount' => (int) $grandTotal, // Must be integer
             ],
             'customer_details' => [
                 'first_name' => $customerData['namaPenerima'],
@@ -222,6 +263,10 @@ class OrderController extends Controller
                     'message' => 'Snap token generated',
                     'snap_token' => $snapToken,
                     'reference' => $reference,
+                    'subtotal' => $subtotal,
+                    'service_fee' => $serviceFee,
+                    'shipping_cost' => $shippingCost,
+                    'grand_total' => $grandTotal,
                 ],
 
             ], 200);
