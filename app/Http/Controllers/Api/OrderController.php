@@ -63,7 +63,16 @@ class OrderController extends Controller
             'customer_data.nomorTelepon' => 'required|string|min:8|max:15',
 
             // Also validate your items while we're at it
-            'order_items' => 'required|array|min:1',
+            'order_items' => ['required', 'array', 'min:1', function ($attribute, $value, $fail) {
+                $total = collect($value)->sum(fn ($item) => (int) ($item['quantity'] ?? 0));
+                if ($total < config('order.min_checkout_qty')) {
+                    $fail('Minimal pembelian adalah '.config('order.min_checkout_qty').' item.');
+                }
+            }],
+            'order_items.*.id' => 'required',
+            'order_items.*.name' => 'required|string',
+            'order_items.*.price' => 'required|numeric|min:0',
+            'order_items.*.quantity' => 'required|integer|min:1',
             'total_price' => 'required|numeric|min:1',
             'shipping_address' => 'required|array',
             'shipping_cost' => 'required|numeric|min:0',
