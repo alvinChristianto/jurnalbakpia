@@ -1,16 +1,17 @@
 <?php
+
 // app/Mail/TransaksiMail.php
+
 namespace App\Mail;
 
 use App\Models\OlEcommerceTransaction;
 use App\Models\Outlet;
-use Illuminate\Mail\Mailable;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use App\Models\Transaksi;
+use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
 class TransaksiMail extends Mailable implements ShouldQueue
@@ -25,7 +26,7 @@ class TransaksiMail extends Mailable implements ShouldQueue
     {
         $this->transaksi = $transaksi;
 
-        if (!$this->transaksi->relationLoaded('olcustomer')) {
+        if (! $this->transaksi->relationLoaded('olcustomer')) {
             $this->transaksi->load('olcustomer', 'details');
         }
 
@@ -50,14 +51,15 @@ class TransaksiMail extends Mailable implements ShouldQueue
         }
 
         return new Envelope(
-            subject: 'Pembayaran Berhasil | Bakpia 3 Generasi - ' . $this->transaksi->invoice_number,
+            subject: 'Pembayaran Berhasil | Bakpia 3 Generasi - '.$this->transaksi->invoice_number,
             cc: $cc,
         );
     }
 
     public function content(): Content
     {
-        Log::info('Sedang mengirim email invoice: ' . $this->transaksi->invoice_number);
+        Log::info('Sedang mengirim email invoice: '.$this->transaksi->invoice_number);
+
         return new Content(
             view: 'emails.transaksi', // Sesuaikan dengan nama file blade Anda
         );

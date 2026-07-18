@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('bakpia_productions', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('id_bakpia')->references('id')->on('bakpias'); 
+            $table->foreignId('id_bakpia')->references('id')->on('bakpias');
 
             $table->enum('production_status', ['SUCCESS', 'FAIL']);
             $table->integer('amount');

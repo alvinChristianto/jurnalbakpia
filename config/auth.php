@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\OlCustomer;
+use App\Models\User;
+
 return [
 
     /*
@@ -66,11 +69,11 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => env('AUTH_MODEL', User::class),
         ],
         'ol_customers' => [
             'driver' => 'eloquent',
-            'model' => App\Models\OlCustomer::class,
+            'model' => OlCustomer::class,
         ],
         // 'users' => [
         //     'driver' => 'database',

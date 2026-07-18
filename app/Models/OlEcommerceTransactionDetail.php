@@ -10,9 +10,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class OlEcommerceTransactionDetail extends Model
 {
     use HasFactory, HasUuids;
- 
+
     public $incrementing = false;
+
     protected $keyType = 'string';
+
     // Important: Tell Laravel the table name since it's quite long
     protected $table = 'ol_ecommerce_transaction_details';
 

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -13,7 +12,7 @@ class Customer extends Model
         return $this->hasMany(BakpiaTransaction::class);
     }
 
-     public function otherProductTransaction(): HasMany
+    public function otherProductTransaction(): HasMany
     {
         return $this->hasMany(OtherProductTransaction::class);
     }

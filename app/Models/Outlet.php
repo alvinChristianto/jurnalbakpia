@@ -32,7 +32,7 @@ class Outlet extends Model
     ];
 
     protected $casts = [
-        'operational_day'  => 'array',
+        'operational_day' => 'array',
         'operational_hour' => 'array',
     ];
 

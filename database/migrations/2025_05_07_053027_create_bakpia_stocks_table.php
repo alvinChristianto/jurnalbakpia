@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('bakpia_stocks', function (Blueprint $table) {
             $table->id();
-            
-            $table->foreignUuid('id_outlet')->references('id_outlet')->on('outlets'); 
-            $table->foreignId('id_bakpia')->references('id')->on('bakpias'); 
+
+            $table->foreignUuid('id_outlet')->references('id_outlet')->on('outlets');
+            $table->foreignId('id_bakpia')->references('id')->on('bakpias');
 
             $table->string('id_transaction')->nullable();
             $table->enum('box_varian', ['box_8', 'box_18']);

@@ -10,8 +10,6 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class BakpiaResource extends Resource
 {
@@ -31,10 +29,10 @@ class BakpiaResource extends Resource
                     ->maxLength(100),
                 Forms\Components\TextInput::make('price_8')
                     ->label('harga box isi 8'),
-                    // ->money('idr'),
+                // ->money('idr'),
                 Forms\Components\TextInput::make('price_18')
-                    ->label('harga box isi 18')
-                    // ->money('idr')
+                    ->label('harga box isi 18'),
+                // ->money('idr')
             ]);
     }
 

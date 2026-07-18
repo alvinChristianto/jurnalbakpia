@@ -165,7 +165,7 @@ class OtherProductTransactionResource extends Resource
                         Repeater::make('other_transaction_detail')
                             ->label('detail Produk yang dibeli')
                             ->schema([
-                                Forms\Components\Select::make('id_other_product')
+                                Select::make('id_other_product')
                                     ->label('Nama Produk')
                                     ->options(function (Get $get) {
                                         return OtherProduct::pluck('name', 'id');
@@ -240,7 +240,7 @@ class OtherProductTransactionResource extends Resource
                                         $set('total_price', $priceTotl);
                                     })
                             ),
-                        Forms\Components\Select::make('id_payment')
+                        Select::make('id_payment')
                             ->label('metode pembayaran')
                             ->relationship('payment', 'name')
                             ->searchable()
@@ -267,7 +267,7 @@ class OtherProductTransactionResource extends Resource
                                     ->tel()
                                     ->required(),
 
-                                Forms\Components\Select::make('gender')
+                                Select::make('gender')
                                     ->options([
                                         'L' => 'Laki-laki',
                                         'P' => 'Perempuan',

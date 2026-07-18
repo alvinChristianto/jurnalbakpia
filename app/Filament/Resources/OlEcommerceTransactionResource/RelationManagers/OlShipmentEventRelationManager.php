@@ -26,11 +26,11 @@ class OlShipmentEventRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('event_type')
                     ->label('Tipe Event')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'PICKED_UP', 'IN_TRANSIT' => 'info',
-                        'DELIVERED', 'FINISHED'   => 'success',
-                        'RETURNED', 'FAILED'       => 'danger',
-                        default                    => 'gray',
+                        'DELIVERED', 'FINISHED' => 'success',
+                        'RETURNED', 'FAILED' => 'danger',
+                        default => 'gray',
                     })
                     ->searchable(),
                 Tables\Columns\TextColumn::make('awb')

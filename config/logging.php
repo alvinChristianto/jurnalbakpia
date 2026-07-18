@@ -1,5 +1,6 @@
 <?php
 
+use App\Logging\CustomizeDailyLogFilename;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -68,7 +69,7 @@ return [
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/bakpia.log'),
-            'tap' => [App\Logging\CustomizeDailyLogFilename::class],
+            'tap' => [CustomizeDailyLogFilename::class],
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,

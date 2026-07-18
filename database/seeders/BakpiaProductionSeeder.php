@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use Carbon\Carbon;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -32,7 +31,6 @@ class BakpiaProductionSeeder extends Seeder
                 'updated_at' => Carbon::now(),
             ],
 
-            
             [
                 'id_bakpia' => '2',
                 'production_status' => 'SUCCESS',
@@ -50,7 +48,6 @@ class BakpiaProductionSeeder extends Seeder
                 'updated_at' => Carbon::now(),
             ],
 
-            
             [
                 'id_bakpia' => '3',
                 'production_status' => 'SUCCESS',

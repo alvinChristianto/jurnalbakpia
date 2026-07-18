@@ -3,15 +3,12 @@
 namespace App\Filament\Resources\OutletResource\RelationManagers;
 
 use App\Models\Bakpia;
-use App\Models\Outlet;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class BakpiaShipmentRelationManager extends RelationManager
 {
@@ -26,7 +23,7 @@ class BakpiaShipmentRelationManager extends RelationManager
                         return Bakpia::pluck('name', 'id');
                     })
                     ->required(),
-                
+
                 Forms\Components\Select::make('box_varian')
                     ->options([
                         'box_8' => 'isi 8',

@@ -7,20 +7,17 @@ use App\Filament\Resources\OlEcommerceTransactionResource\Pages;
 use App\Filament\Resources\OlEcommerceTransactionResource\RelationManagers;
 use App\Models\OlEcommerceTransaction;
 use App\Services\KiriminajaService;
-use Filament\Notifications\Notification;
 use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Tabs\Tab;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Columns\Column;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -32,9 +29,11 @@ class OlEcommerceTransactionResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $navigationLabel = 'Transaksi Online';
+
     protected static ?string $navigationGroup = 'Master website ';
 
     protected static ?string $modelLabel = 'Transaksi Online ';
+
     public static function form(Form $form): Form
     {
         return $form
@@ -93,7 +92,7 @@ class OlEcommerceTransactionResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('invoice_number')
                     ->label('No Invoice')
-                    ->description(fn($record) => $record->olcustomer->name)
+                    ->description(fn ($record) => $record->olcustomer->name)
                     ->searchable(),
                 Tables\Columns\TextColumn::make('grand_total')
                     ->label('Total Pembayaran')
@@ -110,8 +109,8 @@ class OlEcommerceTransactionResource extends Resource
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
 
-                    ->formatStateUsing(fn(TransactionStatus $state) => $state->label())
-                    ->color(fn(TransactionStatus $state) => $state->color())
+                    ->formatStateUsing(fn (TransactionStatus $state) => $state->label())
+                    ->color(fn (TransactionStatus $state) => $state->color())
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('requested_shipping_datetime')
@@ -184,24 +183,22 @@ class OlEcommerceTransactionResource extends Resource
                         return $query
                             ->when(
                                 $data['from'] ?? null,
-                                fn($query, $date) =>
-                                $query->whereDate('created_at', '>=', Carbon::parse($date))
+                                fn ($query, $date) => $query->whereDate('created_at', '>=', Carbon::parse($date))
                             )
                             ->when(
                                 $data['until'] ?? null,
-                                fn($query, $date) =>
-                                $query->whereDate('created_at', '<=', Carbon::parse($date))
+                                fn ($query, $date) => $query->whereDate('created_at', '<=', Carbon::parse($date))
                             );
                     })
                     ->indicateUsing(function (array $data): array {
                         $indicators = [];
 
                         if ($data['from'] ?? null) {
-                            $indicators[] = 'Dari: ' . Carbon::parse($data['from'])->format('d M Y');
+                            $indicators[] = 'Dari: '.Carbon::parse($data['from'])->format('d M Y');
                         }
 
                         if ($data['until'] ?? null) {
-                            $indicators[] = 'Sampai: ' . Carbon::parse($data['until'])->format('d M Y');
+                            $indicators[] = 'Sampai: '.Carbon::parse($data['until'])->format('d M Y');
                         }
 
                         return $indicators;
@@ -215,26 +212,25 @@ class OlEcommerceTransactionResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Buat Pickup KiriminAja')
                     ->modalDescription('Permintaan pickup akan dikirim ke KiriminAja. Pastikan pesanan sudah disiapkan.')
-                    ->visible(fn(OlEcommerceTransaction $record): bool =>
-                        in_array($record->status->value, ['paid', 'processing'])
+                    ->visible(fn (OlEcommerceTransaction $record): bool => in_array($record->status->value, ['paid', 'processing'])
                         && ($record->shipping_address_snapshot['type'] ?? '') === 'delivery'
                         && is_null($record->tracking_number)
                     )
                     ->action(function (OlEcommerceTransaction $record): void {
                         try {
-                            $service  = app(KiriminajaService::class);
+                            $service = app(KiriminajaService::class);
                             $response = $service->createExpressOrder($record);
                             $kjOrderId = $response['details'][0]['kj_order_id'] ?? null;
 
                             $record->update([
                                 'tracking_number' => $kjOrderId,
-                                'shipped_at'      => now(),
-                                'status'          => 'shipping',
+                                'shipped_at' => now(),
+                                'status' => 'shipping',
                             ]);
 
                             Notification::make()
                                 ->title('Pickup berhasil dibuat')
-                                ->body('KJ Order ID: ' . ($kjOrderId ?? '-'))
+                                ->body('KJ Order ID: '.($kjOrderId ?? '-'))
                                 ->success()
                                 ->send();
                         } catch (\Throwable $e) {
@@ -255,7 +251,7 @@ class OlEcommerceTransactionResource extends Resource
                     ExportBulkAction::make()->exports([
                         ExcelExport::make()
                             ->fromTable()
-                            ->withFilename(date('Y-m-d') . ' - OL E-commerce Transactions')
+                            ->withFilename(date('Y-m-d').' - OL E-commerce Transactions')
                             ->withColumns([
                                 Column::make('invoice_number')->heading('Invoice ID'),
                                 Column::make('olcustomer.name')->heading('customer Name'),
@@ -266,7 +262,7 @@ class OlEcommerceTransactionResource extends Resource
                                 Column::make('created_at')->heading('Created At'),
                                 Column::make('updated_at')->heading('Updated At'),
                             ]),
-                    ])
+                    ]),
                 ]),
             ])
 
