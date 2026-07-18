@@ -58,8 +58,8 @@ class OlProductResource extends Resource
                                 'Keju' => 'Keju',
                                 'Abon' => 'Abon',
                                 'Pisang' => 'Pisang',
-                                'Coklat' => 'Coklat',
-                                'Kacang' => 'Kacang',
+                                'Coklat_Almond' => 'Coklat Almond',
+                                'Kacang_Mete' => 'Kacang Mete',
                                 'Original' => 'Original',
                             ])
                             ->searchable()
