@@ -34,7 +34,7 @@ class AdminFeeCapTest extends TestCase
     {
         // quantity 2 to satisfy the separate min-checkout-qty rule (config('order.min_checkout_qty'))
         $product = OlProduct::create([
-            'name' => 'Bakpia Keju', 'price' => intdiv($subtotal, 2), 'category' => 'BAKPIA', 'status' => 'Active',
+            'name' => 'Bakpia Keju', 'price' => intdiv($subtotal, 2), 'category' => 'BAKPIA', 'status' => 'ACTIVE',
         ]);
 
         $totalPrice = $subtotal + $expectedFee;
@@ -62,7 +62,7 @@ class AdminFeeCapTest extends TestCase
     public function test_tampered_total_price_is_rejected_with_price_mismatch(): void
     {
         $product = OlProduct::create([
-            'name' => 'Bakpia Keju', 'price' => 50000, 'category' => 'BAKPIA', 'status' => 'Active',
+            'name' => 'Bakpia Keju', 'price' => 50000, 'category' => 'BAKPIA', 'status' => 'ACTIVE',
         ]);
 
         // Real total should be 100.000 (2x50.000) + 10.000 (capped fee) = 110.000; client claims 100.000.
