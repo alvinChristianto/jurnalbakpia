@@ -15,8 +15,8 @@ return new class extends Migration
             $table->string('id_transaction')->primary();
             $table->foreignId('id_customer')->references('id')->on('customers');
             $table->foreignId('id_payment')->references('id')->on('payments');
-            $table->foreignUuid('id_outlet')->references('id_outlet')->on('outlets'); 
-            $table->json('transaction_detail')->nullable();     //tipe, amount
+            $table->foreignUuid('id_outlet')->references('id_outlet')->on('outlets');
+            $table->json('transaction_detail')->nullable();     // tipe, amount
             $table->unsignedInteger('total_price');
             $table->integer('discount')->nullable();
             $table->enum('status', ['PAID', 'REFUND']);

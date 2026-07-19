@@ -3,14 +3,13 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\BakpiaTransactionResource\Pages;
-use App\Filament\Resources\BakpiaTransactionResource\RelationManagers;
 use App\Models\Bakpia;
 use App\Models\BakpiaStock;
 use App\Models\BakpiaTransaction;
 use App\Models\Outlet;
 use Carbon\Carbon;
-use Filament\Forms\Components\Actions\Action;
 use Filament\Forms;
+use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\Repeater;
@@ -25,12 +24,11 @@ use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Columns\Column;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
-use Illuminate\Support\Facades\Auth;
 
 class BakpiaTransactionResource extends Resource
 {
@@ -39,6 +37,7 @@ class BakpiaTransactionResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $navigationLabel = 'Transaksi Bakpia';
+
     protected static ?string $navigationGroup = 'Transaksi Bakpia ';
 
     protected static ?string $modelLabel = 'Transaksi Bakpia';
@@ -55,19 +54,21 @@ class BakpiaTransactionResource extends Resource
             if ($sparepart) {
                 // Example: Set another TextInput named 'sparepart_price' with the selected sparepart's price
                 if ($boxVarianPer === 'box_8') {
-                    $prc =  $sparepart->price_8;
+                    $prc = $sparepart->price_8;
                 } elseif ($boxVarianPer === 'box_18') {
-                    $prc =  $sparepart->price_18;
+                    $prc = $sparepart->price_18;
                 }
                 Log::info($sparepart->name);
                 Log::info($prc);
+
                 return [$sparepart->name, $prc];
             }
         } else {
 
-            return ["", ""];
+            return ['', ''];
         }
     }
+
     public static function calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer)
     {
         Log::info($boxVarianPer);
@@ -96,11 +97,11 @@ class BakpiaTransactionResource extends Resource
         $totalStock = $stockFromGudang - $stockSold - $stockReturned;
         $checkStockBakpia = $totalStock - $amountPer;
 
-        Log::info($checkStockBakpia . ' | IN ' . $stockFromGudang . ' | SOLD ' . $stockSold . ' | RETN ' . $stockReturned . " || " . $amountPer);
+        Log::info($checkStockBakpia.' | IN '.$stockFromGudang.' | SOLD '.$stockSold.' | RETN '.$stockReturned.' || '.$amountPer);
         if ($checkStockBakpia < 0) {
             Notification::make()
                 ->title('Error') // Set the title of the notification
-                ->body('No Bakpia Stock left | ' . $checkStockBakpia) // Set the body of the notification
+                ->body('No Bakpia Stock left | '.$checkStockBakpia) // Set the body of the notification
                 ->danger() // Set the type to danger (for error)
                 ->send(); // Send the notification
 
@@ -111,7 +112,7 @@ class BakpiaTransactionResource extends Resource
 
         if ($boxVarianPer === 'box_8') {
             $price = Bakpia::where('id', $idBakpiaPer)->value('price_8');
-        } else if ($boxVarianPer === 'box_18') {
+        } elseif ($boxVarianPer === 'box_18') {
             $price = Bakpia::where('id', $idBakpiaPer)->value('price_18');
         }
 
@@ -139,10 +140,8 @@ class BakpiaTransactionResource extends Resource
         return $tempSumAll;
     }
 
-
     public static function form(Form $form): Form
     {
-
 
         return $form
             ->schema([
@@ -154,6 +153,7 @@ class BakpiaTransactionResource extends Resource
 
                         if (in_array(Auth::user()->email, $adminEmail, true)) {
                             $outletName = Outlet::all()->pluck('name', 'id_outlet');
+
                             // dd($outletName);
                             return $outletName;
                         } else {
@@ -167,6 +167,7 @@ class BakpiaTransactionResource extends Resource
                                 // array_push($roleOutlets, $outletName[0]);
                                 $roleOutlets[$ids] = $outletName[0];
                             }
+
                             // dd($roleOutlets);
                             return $roleOutlets;
                         }
@@ -179,7 +180,7 @@ class BakpiaTransactionResource extends Resource
                         Repeater::make('transaction_detail')
                             ->label('detail bakpia yang dibeli')
                             ->schema([
-                                Forms\Components\Select::make('id_bakpia')
+                                Select::make('id_bakpia')
                                     ->label('jenis bakpia')
                                     ->options(function (Get $get) {
                                         return Bakpia::pluck('name', 'id');
@@ -187,7 +188,7 @@ class BakpiaTransactionResource extends Resource
                                     ->searchable()
                                     ->required(),
 
-                                Forms\Components\Select::make('box_varian')
+                                Select::make('box_varian')
                                     ->label('jenis box')
                                     ->options([
                                         'box_8' => 'isi 8',
@@ -214,8 +215,8 @@ class BakpiaTransactionResource extends Resource
                                                 $idBakpiaPer = $get('id_bakpia');
                                                 $idOutlet = $get('../../id_outlet');
 
-                                                $res =  static::calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer);
-                                                $res2 = static::dataBakpia($idBakpiaPer, $boxVarianPer,);
+                                                $res = static::calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer);
+                                                $res2 = static::dataBakpia($idBakpiaPer, $boxVarianPer);
 
                                                 $set('price_per', $res[0]);
 
@@ -241,11 +242,9 @@ class BakpiaTransactionResource extends Resource
                                     ->integer()
                                     ->disabled(),
 
-
-
                             ])
                             ->columnSpan('full')
-                            ->columns(['md' => 3, 'xl' => 4])
+                            ->columns(['md' => 3, 'xl' => 4]),
                     ]),
                 Fieldset::make('Data Pembayaran')
                     ->schema([
@@ -263,12 +262,12 @@ class BakpiaTransactionResource extends Resource
                                     ->action(function (Set $set, Get $get, $state) {
                                         $transaction_detail = $get('transaction_detail');
 
-                                        $priceTotl =  static::calculatePrice($transaction_detail);
+                                        $priceTotl = static::calculatePrice($transaction_detail);
                                         Log::info($priceTotl);
                                         $set('total_price', $priceTotl);
                                     })
                             ),
-                        Forms\Components\Select::make('id_payment')
+                        Select::make('id_payment')
                             ->label('metode pembayaran')
                             ->relationship('payment', 'name')
                             ->searchable()
@@ -295,10 +294,10 @@ class BakpiaTransactionResource extends Resource
                                     ->tel()
                                     ->required(),
 
-                                Forms\Components\Select::make('gender')
+                                Select::make('gender')
                                     ->options([
                                         'L' => 'Laki-laki',
-                                        'P' => 'Perempuan'
+                                        'P' => 'Perempuan',
                                     ])
                                     ->required(),
                                 Forms\Components\Textarea::make('address')
@@ -313,9 +312,9 @@ class BakpiaTransactionResource extends Resource
                                     ->maxLength(255)
                                     ->columnSpan('full'),
 
-                            ])
+                            ]),
                     ])
-                    ->required()
+                    ->required(),
                 // ->createOptionUsing(function (array $data) {
                 //     $now = Carbon::now();
 
@@ -373,22 +372,23 @@ class BakpiaTransactionResource extends Resource
                             DatePicker::make('created_until'),
                         ])
                         ->indicateUsing(function (array $data): ?string {
-                            if (!$data['created_from'] && !$data['created_until']) {
+                            if (! $data['created_from'] && ! $data['created_until']) {
                                 return null;
                             }
-                            $indicatorFrom = 'Created from ' . Carbon::parse($data['created_from'])->toFormattedDateString();
-                            $indicatorUntil = ' to ' . Carbon::parse($data['created_until'])->toFormattedDateString();
-                            return $indicatorFrom . " " . $indicatorUntil;
+                            $indicatorFrom = 'Created from '.Carbon::parse($data['created_from'])->toFormattedDateString();
+                            $indicatorUntil = ' to '.Carbon::parse($data['created_until'])->toFormattedDateString();
+
+                            return $indicatorFrom.' '.$indicatorUntil;
                         })
                         ->query(function (Builder $query, array $data): Builder {
                             return $query
                                 ->when(
                                     $data['created_from'],
-                                    fn(Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                                    fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
                                 )
                                 ->when(
                                     $data['created_until'],
-                                    fn(Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                                    fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
                                 );
                         }),
                     Tables\Filters\SelectFilter::make('id_payment')
@@ -396,7 +396,7 @@ class BakpiaTransactionResource extends Resource
                         ->relationship('payment', 'name'),
                     Tables\Filters\SelectFilter::make('id_outlet')
                         ->label('Outlet')
-                        ->relationship('outlet', 'name')
+                        ->relationship('outlet', 'name'),
                 ],
                 layout: FiltersLayout::AboveContentCollapsible
             )
@@ -405,7 +405,7 @@ class BakpiaTransactionResource extends Resource
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('Pdf-nota')
                     ->icon('heroicon-m-clipboard')
-                    ->url(fn(BakpiaTransaction $record) => route('bakpiaTransaction.report', $record))
+                    ->url(fn (BakpiaTransaction $record) => route('bakpiaTransaction.report', $record))
                     ->openUrlInNewTab(),
             ])
             ->bulkActions([
@@ -454,6 +454,7 @@ class BakpiaTransactionResource extends Resource
             'edit' => Pages\EditBakpiaTransaction::route('/{record}/edit'),
         ];
     }
+
     protected function getRedirectUrl(): string
     {
         return '/'; // Or route('filament.pages.dashboard') if you want to go to the dashboard
@@ -468,9 +469,10 @@ class BakpiaTransactionResource extends Resource
         $idUser = $user->id;
         // dd($idUser);
 
-        if (!in_array($idUser, $adminOutlet)) {
+        if (! in_array($idUser, $adminOutlet)) {
             return parent::getEloquentQuery()->wherein('id_outlet', $outlets);
         }
+
         return parent::getEloquentQuery();
     }
 }

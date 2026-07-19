@@ -48,13 +48,13 @@ class OutletResource extends Resource
                 Forms\Components\CheckboxList::make('operational_day')
                     ->label('Hari Operasional')
                     ->options([
-                        'Senin'   => 'Senin',
-                        'Selasa'  => 'Selasa',
-                        'Rabu'    => 'Rabu',
-                        'Kamis'   => 'Kamis',
-                        'Jumat'   => 'Jumat',
-                        'Sabtu'   => 'Sabtu',
-                        'Minggu'  => 'Minggu',
+                        'Senin' => 'Senin',
+                        'Selasa' => 'Selasa',
+                        'Rabu' => 'Rabu',
+                        'Kamis' => 'Kamis',
+                        'Jumat' => 'Jumat',
+                        'Sabtu' => 'Sabtu',
+                        'Minggu' => 'Minggu',
                     ])
                     ->columns(7),
                 Forms\Components\TextInput::make('operational_hour_start')
@@ -91,7 +91,7 @@ class OutletResource extends Resource
                     ->formatStateUsing(fn ($state) => is_array($state) ? implode(', ', $state) : $state),
                 Tables\Columns\TextColumn::make('operational_hour')
                     ->formatStateUsing(fn ($state) => is_array($state)
-                        ? (($state['start'] ?? '') . ' – ' . ($state['end'] ?? ''))
+                        ? (($state['start'] ?? '').' – '.($state['end'] ?? ''))
                         : $state),
             ])
             ->filters([

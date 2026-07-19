@@ -21,7 +21,7 @@ class EditOutlet extends EditRecord
     {
         $data['operational_hour'] = [
             'start' => $data['operational_hour_start'] ?? null,
-            'end'   => $data['operational_hour_end'] ?? null,
+            'end' => $data['operational_hour_end'] ?? null,
         ];
         unset($data['operational_hour_start'], $data['operational_hour_end']);
 

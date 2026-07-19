@@ -9,9 +9,6 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use App\Filament\Resources\OlEcommerceTransactionDetailResource\RelationManagers;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Columns\Column;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -22,12 +19,11 @@ class OlEcommerceTransactionDetailResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
-
     protected static ?string $navigationLabel = 'Detail Transaksi Online';
+
     protected static ?string $navigationGroup = 'Master website ';
 
     protected static ?string $modelLabel = 'Detail Transaksi Online';
-
 
     public static function form(Form $form): Form
     {
@@ -86,12 +82,12 @@ class OlEcommerceTransactionDetailResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                    Tables\Filters\SelectFilter::make('transaction_id')
-                        ->relationship('transaction', 'invoice_number')
-                        ->label('No Invoice'),
-                    Tables\Filters\SelectFilter::make('product_id')
-                        ->relationship('product', 'name')
-                        ->label('Product'),
+                Tables\Filters\SelectFilter::make('transaction_id')
+                    ->relationship('transaction', 'invoice_number')
+                    ->label('No Invoice'),
+                Tables\Filters\SelectFilter::make('product_id')
+                    ->relationship('product', 'name')
+                    ->label('Product'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -104,7 +100,7 @@ class OlEcommerceTransactionDetailResource extends Resource
                     ExportBulkAction::make()->exports([
                         ExcelExport::make()
                             ->fromTable()
-                            ->withFilename(date('Y-m-d') . ' - OL E-com Transactions Detail')
+                            ->withFilename(date('Y-m-d').' - OL E-com Transactions Detail')
                             ->withColumns([
                                 Column::make('transaction.invoice_number')->heading('Invoice ID'),
                                 Column::make('product.name')->heading('Product Name'),
@@ -114,7 +110,7 @@ class OlEcommerceTransactionDetailResource extends Resource
                                 Column::make('created_at')->heading('Created At'),
                                 Column::make('updated_at')->heading('Updated At'),
                             ]),
-                    ])
+                    ]),
                 ]),
             ])
             ->defaultSort('created_at', 'desc')

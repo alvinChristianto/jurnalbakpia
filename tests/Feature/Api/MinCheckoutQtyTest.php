@@ -30,7 +30,7 @@ class MinCheckoutQtyTest extends TestCase
     public function test_single_item_qty_one_is_rejected(): void
     {
         $product = OlProduct::create([
-            'name' => 'Bakpia Keju', 'price' => 25000, 'category' => 'BAKPIA', 'status' => 'Active',
+            'name' => 'Bakpia Keju', 'price' => 25000, 'category' => 'BAKPIA', 'status' => 'ACTIVE',
         ]);
 
         $this->postJson('/api/midtranstokenv1', $this->payload([
@@ -45,7 +45,7 @@ class MinCheckoutQtyTest extends TestCase
     public function test_single_item_qty_two_passes_validation(): void
     {
         $product = OlProduct::create([
-            'name' => 'Bakpia Keju', 'price' => 25000, 'category' => 'BAKPIA', 'status' => 'Active',
+            'name' => 'Bakpia Keju', 'price' => 25000, 'category' => 'BAKPIA', 'status' => 'ACTIVE',
         ]);
 
         // subtotal 50.000 + admin fee 5.000 (10%, under cap) = 55.000
@@ -62,10 +62,10 @@ class MinCheckoutQtyTest extends TestCase
     public function test_two_items_qty_one_each_passes_validation(): void
     {
         $productA = OlProduct::create([
-            'name' => 'Bakpia Keju', 'price' => 25000, 'category' => 'BAKPIA', 'status' => 'Active',
+            'name' => 'Bakpia Keju', 'price' => 25000, 'category' => 'BAKPIA', 'status' => 'ACTIVE',
         ]);
         $productB = OlProduct::create([
-            'name' => 'Bakpia Coklat', 'price' => 27000, 'category' => 'BAKPIA', 'status' => 'Active',
+            'name' => 'Bakpia Coklat', 'price' => 27000, 'category' => 'BAKPIA', 'status' => 'ACTIVE',
         ]);
 
         // subtotal 52.000 + admin fee 5.200 (10%, under cap) = 57.200
@@ -81,7 +81,7 @@ class MinCheckoutQtyTest extends TestCase
     public function test_zero_quantity_is_rejected(): void
     {
         $product = OlProduct::create([
-            'name' => 'Bakpia Keju', 'price' => 25000, 'category' => 'BAKPIA', 'status' => 'Active',
+            'name' => 'Bakpia Keju', 'price' => 25000, 'category' => 'BAKPIA', 'status' => 'ACTIVE',
         ]);
 
         $this->postJson('/api/midtranstokenv1', $this->payload([
@@ -96,7 +96,7 @@ class MinCheckoutQtyTest extends TestCase
     public function test_negative_quantity_is_rejected(): void
     {
         $product = OlProduct::create([
-            'name' => 'Bakpia Keju', 'price' => 25000, 'category' => 'BAKPIA', 'status' => 'Active',
+            'name' => 'Bakpia Keju', 'price' => 25000, 'category' => 'BAKPIA', 'status' => 'ACTIVE',
         ]);
 
         $this->postJson('/api/midtranstokenv1', $this->payload([

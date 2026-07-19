@@ -4,13 +4,12 @@ namespace App\Filament\Resources\CustomerResource\Pages;
 
 use App\Filament\Resources\CustomerResource;
 use Carbon\Carbon;
-use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateCustomer extends CreateRecord
 {
     protected static string $resource = CustomerResource::class;
-    
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         // $now = Carbon::now();
@@ -27,6 +26,7 @@ class CreateCustomer extends CreateRecord
 
         return $data;
     }
+
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');

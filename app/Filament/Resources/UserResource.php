@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
-use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\Outlet;
 use App\Models\User;
 use Filament\Forms;
@@ -13,8 +12,6 @@ use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
@@ -24,10 +21,10 @@ class UserResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $navigationLabel = 'User Admin';
+
     protected static ?string $navigationGroup = 'Master';
 
     protected static ?string $modelLabel = 'User Admin';
-
 
     public static function form(Form $form): Form
     {
@@ -45,10 +42,10 @@ class UserResource extends Resource
                     ->required(fn (Page $livewire): bool => $livewire instanceof CreateRecord),
                 // Forms\Components\Select::make('roles')->multiple()->relationship('roles', 'name')
                 Forms\Components\Select::make('roles')->multiple()->relationship('roles', 'name'),
-          
+
                 Forms\Components\Select::make('outlets')
                     ->multiple()
-                    ->options(Outlet::all()->pluck('name', 'id_outlet'))
+                    ->options(Outlet::all()->pluck('name', 'id_outlet')),
 
             ]);
     }

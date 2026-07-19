@@ -10,9 +10,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class OlProduct extends Model
 {
     use HasFactory, HasUuids;
+
     protected $table = 'ol_products'; // Tell Laravel the custom table name
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -23,12 +25,17 @@ class OlProduct extends Model
         'description',
         'category',
         'status',
+        'flavor',
+        'is_featured',
+        'sort_order',
     ];
 
     protected $hidden = [];
 
     protected $casts = [
         'image' => 'array',
+        'is_featured' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     public function olecommercetransactiondetail(): HasMany

@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('ol_ecommerce_transactions', function (Blueprint $table) {
-           
+
             $table->uuid('id')->primary();
             $table->string('invoice_number')->unique();
             $table->foreignUuid('ol_customer_id')->constrained('ol_customers');

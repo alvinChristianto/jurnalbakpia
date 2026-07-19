@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\BakpiaProductionResource\Pages;
-use App\Filament\Resources\BakpiaProductionResource\RelationManagers;
 use App\Models\Bakpia;
 use App\Models\BakpiaProduction;
 use Filament\Forms;
@@ -12,8 +11,6 @@ use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class BakpiaProductionResource extends Resource
 {
@@ -22,9 +19,11 @@ class BakpiaProductionResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $navigationLabel = 'Produksi Bakpia ';
+
     protected static ?string $navigationGroup = 'Master Bakpia ';
 
     protected static ?string $modelLabel = 'Produksi Bakpia';
+
     public static function form(Form $form): Form
     {
         return $form
@@ -95,6 +94,7 @@ class BakpiaProductionResource extends Resource
             'edit' => Pages\EditBakpiaProduction::route('/{record}/edit'),
         ];
     }
+
     protected function getRedirectUrl(): string
     {
         return '/'; // Or route('filament.pages.dashboard') if you want to go to the dashboard

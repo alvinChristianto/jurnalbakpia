@@ -4,7 +4,6 @@ namespace App\Filament\Resources\OtherProductTransactionResource\Pages;
 
 use App\Filament\Resources\OtherProductTransactionResource;
 use Carbon\Carbon;
-use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateOtherProductTransaction extends CreateRecord
@@ -22,7 +21,7 @@ class CreateOtherProductTransaction extends CreateRecord
         // Generate three random digits
         $randomDigits = str_pad(random_int(100, 999), 3, '0', STR_PAD_LEFT);
 
-        $transformId = "Other_" . $year . $month . $day . $randomDigits;
+        $transformId = 'Other_'.$year.$month.$day.$randomDigits;
         $data['id_transaction'] = $transformId;
 
         return $data;
@@ -37,7 +36,7 @@ class CreateOtherProductTransaction extends CreateRecord
     {
         return [
             $this->getCreateFormAction()->label('Simpan Transaksi'),
-            $this->getCancelFormAction()
+            $this->getCancelFormAction(),
         ];
     }
 }

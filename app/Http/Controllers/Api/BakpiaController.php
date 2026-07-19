@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Bakpia;
 use App\Models\OlProduct;
 use App\Models\Outlet;
+use Illuminate\Http\JsonResponse;
 
 class BakpiaController extends Controller
 {
@@ -16,10 +16,11 @@ class BakpiaController extends Controller
     {
         // Fetch products that are active/available
         // We use paginate so your Next.js frontend doesn't lag if you have 100+ types of Bakpia
-        $products = OlProduct::where('status', 'Active')->latest()
+        $products = OlProduct::where('status', 'ACTIVE')
+            ->orderBy('sort_order')
+            ->orderByDesc('created_at')
             ->paginate(12);
 
-        $randomDecimal = mt_rand(40, 50) / 10;
         // Map the data to ensure full image URLs are returned
         $products->getCollection()->transform(function ($product) {
             return [
@@ -31,6 +32,9 @@ class BakpiaController extends Controller
                 'created_at' => $product->created_at,
                 'updated_at' => $product->updated_at,
                 'category' => $product->category,
+                'flavor' => $product->flavor,
+                'is_featured' => $product->is_featured,
+                'sort_order' => $product->sort_order,
                 'rating' => $product->rating,
                 'status' => $product->status,
             ];
@@ -43,7 +47,7 @@ class BakpiaController extends Controller
         ], 200);
     }
 
-    public function outlets(): \Illuminate\Http\JsonResponse
+    public function outlets(): JsonResponse
     {
         $outlets = Outlet::official()->select([
             'id_outlet', 'name', 'address',

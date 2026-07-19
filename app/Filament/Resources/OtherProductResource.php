@@ -3,15 +3,12 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\OtherProductResource\Pages;
-use App\Filament\Resources\OtherProductResource\RelationManagers;
 use App\Models\OtherProduct;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class OtherProductResource extends Resource
 {
@@ -20,9 +17,11 @@ class OtherProductResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $navigationLabel = 'Data Produk Lain ';
+
     protected static ?string $navigationGroup = 'Produk Lain ';
 
     protected static ?string $modelLabel = 'Data Produk Lain';
+
     public static function form(Form $form): Form
     {
         return $form

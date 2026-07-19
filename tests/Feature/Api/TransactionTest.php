@@ -32,7 +32,7 @@ class TransactionTest extends TestCase
             'name' => 'Bakpia Keju',
             'price' => 35000,
             'category' => 'BAKPIA',
-            'status' => 'Active',
+            'status' => 'ACTIVE',
         ]);
         $tx = OlEcommerceTransaction::create([
             'invoice_number' => 'INV-001',
