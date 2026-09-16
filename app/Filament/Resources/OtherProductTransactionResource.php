@@ -351,22 +351,38 @@ class OtherProductTransactionResource extends Resource
                         return $query
                             ->when(
                                 $data['created_from'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                                fn (Builder $query, $date): Builder => $query->where('created_at', '>=', Carbon::parse($date)->startOfDay()),
                             )
                             ->when(
                                 $data['created_until'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                                fn (Builder $query, $date): Builder => $query->where('created_at', '<=', Carbon::parse($date)->endOfDay()),
                             );
                     }),
                 Tables\Filters\SelectFilter::make('id_payment')
                     ->label('Payment')
-                    ->relationship('payment', 'name'),
+                    ->relationship('payment', 'name')
+                    ->searchable(),
                 Tables\Filters\SelectFilter::make('id_outlet')
                     ->label('Outlet')
-                    ->relationship('outlet', 'name'),
+                    ->relationship('outlet', 'name')
+                    ->searchable(),
             ], layout: FiltersLayout::AboveContentCollapsible)
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->select([
+                'id_transaction',
+                'id_outlet',
+                'id_customer',
+                'id_payment',
+                'total_price',
+                'status',
+                'created_at',
+            ]))
             ->actions([
-                Tables\Actions\ViewAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->mutateRecordDataUsing(function (array $data): array {
+                        $fresh = OtherProductTransaction::query()->find($data['id_transaction']);
+
+                        return array_merge($data, $fresh->attributesToArray());
+                    }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('Pdf-nota')
                     ->icon('heroicon-m-clipboard')

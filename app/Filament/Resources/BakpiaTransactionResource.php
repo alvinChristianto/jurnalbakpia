@@ -73,22 +73,19 @@ class BakpiaTransactionResource extends Resource
     {
         Log::info($boxVarianPer);
         $price = 0;
-        $stockFromGudang = BakpiaStock::all()
-            ->where('id_outlet', $idOutlet)
+        $stockFromGudang = BakpiaStock::where('id_outlet', $idOutlet)
             ->where('id_bakpia', $idBakpiaPer)
             ->where('box_varian', $boxVarianPer)
             ->where('status', 'STOCK_IN')
             ->sum('amount');
 
-        $stockSold = BakpiaStock::all()
-            ->where('id_outlet', $idOutlet)
+        $stockSold = BakpiaStock::where('id_outlet', $idOutlet)
             ->where('id_bakpia', $idBakpiaPer)
             ->where('box_varian', $boxVarianPer)
             ->where('status', 'STOCK_SOLD')
             ->sum('amount');
 
-        $stockReturned = BakpiaStock::all()
-            ->where('id_outlet', $idOutlet)
+        $stockReturned = BakpiaStock::where('id_outlet', $idOutlet)
             ->where('id_bakpia', $idBakpiaPer)
             ->where('box_varian', $boxVarianPer)
             ->where('status', 'RETURNED')
@@ -384,24 +381,40 @@ class BakpiaTransactionResource extends Resource
                             return $query
                                 ->when(
                                     $data['created_from'],
-                                    fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                                    fn (Builder $query, $date): Builder => $query->where('created_at', '>=', Carbon::parse($date)->startOfDay()),
                                 )
                                 ->when(
                                     $data['created_until'],
-                                    fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                                    fn (Builder $query, $date): Builder => $query->where('created_at', '<=', Carbon::parse($date)->endOfDay()),
                                 );
                         }),
                     Tables\Filters\SelectFilter::make('id_payment')
                         ->label('Payment')
-                        ->relationship('payment', 'name'),
+                        ->relationship('payment', 'name')
+                        ->searchable(),
                     Tables\Filters\SelectFilter::make('id_outlet')
                         ->label('Outlet')
-                        ->relationship('outlet', 'name'),
+                        ->relationship('outlet', 'name')
+                        ->searchable(),
                 ],
                 layout: FiltersLayout::AboveContentCollapsible
             )
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->select([
+                'id_transaction',
+                'id_outlet',
+                'id_customer',
+                'id_payment',
+                'total_price',
+                'status',
+                'created_at',
+            ]))
             ->actions([
-                Tables\Actions\ViewAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->mutateRecordDataUsing(function (array $data): array {
+                        $fresh = BakpiaTransaction::query()->find($data['id_transaction']);
+
+                        return array_merge($data, $fresh->attributesToArray());
+                    }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('Pdf-nota')
                     ->icon('heroicon-m-clipboard')
@@ -425,18 +438,6 @@ class BakpiaTransactionResource extends Resource
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
-    }
-
-    public static function mutateFormDataBeforeCreate(array $data): array
-    {
-        dd('test');
-        Notification::make()
-            ->title('Error') // Set the title of the notification
-            ->body('Something went wrong. Record not created.') // Set the body of the notification
-            ->danger() // Set the type to danger (for error)
-            ->send(); // Send the notification
-
-        throw new \Exception('Record creation failed due to the specified condition.');
     }
 
     public static function getRelations(): array

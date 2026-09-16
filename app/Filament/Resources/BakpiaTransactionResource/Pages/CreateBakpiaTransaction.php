@@ -28,20 +28,17 @@ class CreateBakpiaTransaction extends CreateRecord
 
             $item['box_varian'] = ($item['box_varian'] == '8') ? 'box_8' : (($item['box_varian'] == '18') ? 'box_18' : $item['box_varian']);
 
-            $stockFromGudang = BakpiaStock::all()
-                ->where('id_outlet', $data['id_outlet'])
+            $stockFromGudang = BakpiaStock::where('id_outlet', $data['id_outlet'])
                 ->where('id_bakpia', $item['id_bakpia'])
                 ->where('status', 'STOCK_IN')
                 ->sum('amount');
 
-            $stockSold = BakpiaStock::all()
-                ->where('id_outlet', $data['id_outlet'])
+            $stockSold = BakpiaStock::where('id_outlet', $data['id_outlet'])
                 ->where('id_bakpia', $item['id_bakpia'])
                 ->where('status', 'STOCK_SOLD')
                 ->sum('amount');
 
-            $stockReturned = BakpiaStock::all()
-                ->where('id_outlet', $data['id_outlet'])
+            $stockReturned = BakpiaStock::where('id_outlet', $data['id_outlet'])
                 ->where('id_bakpia', $item['id_bakpia'])
                 ->where('status', 'RETURNED')
                 ->sum('amount');
