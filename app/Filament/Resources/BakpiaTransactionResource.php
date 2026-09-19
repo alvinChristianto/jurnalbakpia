@@ -42,11 +42,6 @@ class BakpiaTransactionResource extends Resource
 
     protected static ?string $modelLabel = 'Transaksi Bakpia';
 
-    public static function shouldRegisterNavigation(): bool
-    {
-        return false;
-    }
-
     public static function dataBakpia($idB, $var)
     {
         $idBakpiaPer = $idB;

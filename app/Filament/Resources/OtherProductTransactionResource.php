@@ -41,11 +41,6 @@ class OtherProductTransactionResource extends Resource
 
     protected static ?string $modelLabel = 'Transaksi Produk Lain';
 
-    public static function shouldRegisterNavigation(): bool
-    {
-        return false;
-    }
-
     public static function calculatePricePer_other($idOutlet, $idBakpiaPer, $amountPer)
     {
         $price = 0;
