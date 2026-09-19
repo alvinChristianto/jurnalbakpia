@@ -25,6 +25,10 @@ class TransactionListQueryTest extends TestCase
 
     private const MEMORY_HEADROOM_MB = 16;
 
+    private int $customerId;
+
+    private int $paymentId;
+
     public function test_filtered_list_query_stays_within_memory_headroom(): void
     {
         $this->seedReferenceRows();
@@ -93,14 +97,14 @@ class TransactionListQueryTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('payments')->insert([
+        $this->paymentId = DB::table('payments')->insertGetId([
             'name' => 'Tunai',
             'type' => 'CASH',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        DB::table('customers')->insert([
+        $this->customerId = DB::table('customers')->insertGetId([
             'name' => 'Pelanggan Test',
             'gender' => '-',
             'created_at' => now(),
@@ -116,8 +120,8 @@ class TransactionListQueryTest extends TestCase
             $rows[] = [
                 'id_transaction' => sprintf('TXN-%s-%06d', $prefix, $i),
                 'id_outlet' => 'OUTLET-01',
-                'id_customer' => 1,
-                'id_payment' => 1,
+                'id_customer' => $this->customerId,
+                'id_payment' => $this->paymentId,
                 $detailColumn => json_encode([
                     ['id_bakpia' => 1, 'name_bakpia' => 'Bakpia Keju Panjang', 'amount' => 2, 'price_per' => 50000],
                     ['id_bakpia' => 2, 'name_bakpia' => 'Bakpia Coklat', 'amount' => 1, 'price_per' => 45000],

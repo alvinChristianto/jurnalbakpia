@@ -86,4 +86,41 @@ class DownloadPdfController extends Controller
 
         return $pdf->stream(); // renders the PDF in the browser
     }
+
+    public function transaction($id)
+    {
+        $record = DB::table('transactions')
+            ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
+            ->join('customers', 'transactions.id_customer', '=', 'customers.id')
+            ->join('payments', 'transactions.id_payment', '=', 'payments.id')
+            ->select('transactions.*', 'outlets.name  as outlet_name', 'customers.name  as customer_name', 'payments.name  as payment_name')
+            ->where('transactions.id_transaction', $id)
+            ->first();
+
+        $transaction_detail = json_decode($record->transaction_details);
+        // dd($transaction_detail);
+        foreach ($transaction_detail as $key => $value) {
+
+            if (isset($value->box_varian)) { // Always good to check if property exists
+                switch ($value->box_varian) {
+                    case 'box_8':
+                        $value->isi = 'isi 8';
+                        break;
+                    case 'box_18':
+                        $value->isi = 'isi 18';
+                        break;
+                }
+            }
+        }
+
+        // PARSING DATE
+        $record->created_at = Carbon::parse($record->created_at)->format('d M Y H:i:s');
+        $record->transaction_admin = Auth::user()->name;
+        // dd($record);
+
+        $pdf = App::make('dompdf.wrapper');
+        $pdf->loadView('pdf.transaction_report', compact('record', 'transaction_detail')); // Pass the variable $record to the blade file
+
+        return $pdf->stream(); // renders the PDF in the browser
+    }
 }
