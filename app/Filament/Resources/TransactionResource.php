@@ -182,6 +182,7 @@ class TransactionResource extends Resource
                     })
                     ->default(fn (): ?string => static::singleOutlet())
                     ->disabled(fn (): bool => static::singleOutlet() !== null)
+                    ->dehydrated(true)
                     ->columnSpan('full')
                     ->required(),
                 Fieldset::make('Data Produk')
