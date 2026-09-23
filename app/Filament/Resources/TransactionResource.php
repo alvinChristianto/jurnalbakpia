@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\TransactionResource\Pages;
 use App\Models\Bakpia;
 use App\Models\BakpiaStock;
+use App\Models\Iseya;
 use App\Models\OtherProduct;
 use App\Models\Outlet;
 use App\Models\Transaction;
@@ -118,6 +119,17 @@ class TransactionResource extends Resource
             return;
         }
 
+        if ($productType === 'ISEYA') {
+            $product = Iseya::find($productId);
+            $set('price_per', $product->price * $amountPer);
+            $set('product_name', $product->name ?? '');
+            $set('price_unit', $product->price ?? 0);
+            $set('stock_latest', null);
+            $set('stock_after_sold', null);
+
+            return;
+        }
+
         $idOutlet = $get('../../id_outlet');
         $boxVarianPer = $get('box_varian');
         $res = static::calculatePricePer($idOutlet, $productId, $boxVarianPer, $amountPer);
@@ -162,7 +174,11 @@ class TransactionResource extends Resource
 
     public static function productTypeLabel(string $type): string
     {
-        return $type === 'OTHER' ? 'Produk Lain' : 'Bakpia';
+        return match ($type) {
+            'OTHER' => 'Produk Lain',
+            'ISEYA' => 'Iseya',
+            default => 'Bakpia',
+        };
     }
 
     public static function form(Form $form): Form
@@ -194,6 +210,7 @@ class TransactionResource extends Resource
                                     ->label('tipe produk')
                                     ->options([
                                         'BAKPIA' => 'Bakpia',
+                                        'ISEYA' => 'Iseya',
                                         'OTHER' => 'Produk Lain',
                                     ])
                                     ->default('BAKPIA')
@@ -205,6 +222,10 @@ class TransactionResource extends Resource
                                     ->options(function (Get $get): array {
                                         if ($get('product_type') === 'OTHER') {
                                             return OtherProduct::pluck('name', 'id')->toArray();
+                                        }
+
+                                        if ($get('product_type') === 'ISEYA') {
+                                            return Iseya::pluck('name', 'id')->toArray();
                                         }
 
                                         return Bakpia::pluck('name', 'id')->toArray();
@@ -359,7 +380,8 @@ class TransactionResource extends Resource
                     ->color(fn (string $state): string => match ($state) {
                         'Bakpia' => 'info',
                         'Produk Lain' => 'warning',
-                        default => 'success',
+                        'Iseya' => 'success',
+                        default => 'primary',
                     })
                     ->state(function (Transaction $record): string {
                         $details = $record->transaction_details ?? [];
@@ -413,6 +435,19 @@ class TransactionResource extends Resource
                         ->label('Outlet')
                         ->relationship('outlet', 'name')
                         ->searchable(),
+                    Tables\Filters\SelectFilter::make('product_type')
+                        ->label('Tipe Produk')
+                        ->options([
+                            'BAKPIA' => 'Bakpia',
+                            'ISEYA' => 'Iseya',
+                            'OTHER' => 'Produk Lain',
+                        ])
+                        ->query(function (Builder $query, array $data): Builder {
+                            return $query->when(
+                                $data['value'] ?? null,
+                                fn (Builder $query, string $type): Builder => $query->whereJsonContains('transaction_details', ['product_type' => $type]),
+                            );
+                        }),
                 ],
                 layout: FiltersLayout::AboveContentCollapsible
             )
