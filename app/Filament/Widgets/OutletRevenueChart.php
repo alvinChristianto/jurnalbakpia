@@ -4,12 +4,15 @@ namespace App\Filament\Widgets;
 
 use App\Models\BakpiaTransaction;
 use App\Models\Outlet;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
 use Flowframe\Trend\Trend;
 use Flowframe\Trend\TrendValue;
 
 class OutletRevenueChart extends ChartWidget
 {
+    use HasWidgetShield;
+
     protected static ?string $heading = 'Revenue per Outlet';
 
     protected function getData(): array
