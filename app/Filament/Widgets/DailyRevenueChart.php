@@ -4,12 +4,15 @@ namespace App\Filament\Widgets;
 
 use App\Models\BakpiaTransaction;
 use App\Models\Outlet;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
 use Flowframe\Trend\Trend;
 use Flowframe\Trend\TrendValue;
 
 class DailyRevenueChart extends ChartWidget
 {
+    use HasWidgetShield;
+
     protected static ?string $heading = 'Daily Revenue (Last 30 Days)';
 
     protected static ?int $sort = 2;

@@ -98,6 +98,7 @@ class OutletResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
@@ -119,6 +120,7 @@ class OutletResource extends Resource
         return [
             'index' => Pages\ListOutlets::route('/'),
             'create' => Pages\CreateOutlet::route('/create'),
+            'view' => Pages\ViewOutlet::route('/{record}'),
             'edit' => Pages\EditOutlet::route('/{record}/edit'),
         ];
     }

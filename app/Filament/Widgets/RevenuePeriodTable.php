@@ -4,10 +4,13 @@ namespace App\Filament\Widgets;
 
 use App\Models\Outlet;
 use App\Models\Transaction;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\Widget;
 
 class RevenuePeriodTable extends Widget
 {
+    use HasWidgetShield;
+
     protected static string $view = 'filament.widgets.revenue-period-table';
 
     protected int|string|array $columnSpan = 'full';
