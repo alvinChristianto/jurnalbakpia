@@ -44,8 +44,19 @@ class TransactionResource extends Resource
 
     protected static ?string $modelLabel = 'Transaksi';
 
-    public static function calculatePricePer($idOutlet, $idBakpiaPer, $amountPer)
+    /**
+     * @return array{0: int|float|null, 1: int|null, 2: int|null}
+     */
+    public static function calculatePricePer(?string $idOutlet, $idBakpiaPer, $amountPer)
     {
+        $price = Bakpia::where('id', $idBakpiaPer)->value('price') * $amountPer;
+
+        // No outlet picked yet (multi-outlet users start with a blank selector):
+        // price can still be shown, but on-hand stock cannot be resolved.
+        if (blank($idOutlet)) {
+            return [$price, null, null];
+        }
+
         $totalStock = BakpiaStock::onHand($idOutlet, (int) $idBakpiaPer);
         $checkStockBakpia = $totalStock - $amountPer;
 
@@ -59,58 +70,94 @@ class TransactionResource extends Resource
             return [0, $totalStock, $checkStockBakpia];
         }
 
-        $price = Bakpia::where('id', $idBakpiaPer)->value('price') * $amountPer;
-
         return [$price, $totalStock, $checkStockBakpia];
     }
 
-    public static function recalculateLine(Set $set, Get $get): void
+    /**
+     * State of a single line item, independent of which component triggered it.
+     *
+     * @return array<string, mixed>
+     */
+    public static function lineStateFor(?string $productType, mixed $productId, int $amountPer, ?string $idOutlet): array
     {
-        $productType = $get('product_type');
-        $productId = $get('product_id');
-        $amountPer = (int) $get('amount');
+        $state = [
+            'price_per' => 0,
+            'product_name' => null,
+            'price_unit' => null,
+            'stock_latest' => null,
+            'stock_after_sold' => null,
+        ];
 
-        if (! $productId || ! $amountPer) {
-            $set('price_per', 0);
-            $set('product_name', null);
-            $set('price_unit', null);
-            $set('stock_latest', null);
-            $set('stock_after_sold', null);
-
-            return;
+        if (! $productId || $amountPer <= 0) {
+            return $state;
         }
 
         if ($productType === 'OTHER') {
             $product = OtherProduct::find($productId);
-            $set('price_per', static::calculatePricePerOther($productId, $amountPer));
-            $set('product_name', $product->name ?? '');
-            $set('price_unit', $product->price ?? 0);
-            $set('stock_latest', null);
-            $set('stock_after_sold', null);
 
-            return;
+            $state['price_per'] = static::calculatePricePerOther($productId, $amountPer);
+            $state['product_name'] = $product->name ?? '';
+            $state['price_unit'] = $product->price ?? 0;
+
+            return $state;
         }
 
         if ($productType === 'ISEYA') {
             $product = Iseya::find($productId);
-            $set('price_per', $product->price * $amountPer);
-            $set('product_name', $product->name ?? '');
-            $set('price_unit', $product->price ?? 0);
-            $set('stock_latest', null);
-            $set('stock_after_sold', null);
 
-            return;
+            $state['price_per'] = $product->price * $amountPer;
+            $state['product_name'] = $product->name ?? '';
+            $state['price_unit'] = $product->price ?? 0;
+
+            return $state;
         }
 
-        $idOutlet = $get('../../id_outlet');
-        $res = static::calculatePricePer($idOutlet, $productId, $amountPer);
+        [$price, $stockLatest, $stockAfterSold] = static::calculatePricePer($idOutlet, $productId, $amountPer);
         $bakpia = Bakpia::find($productId);
 
-        $set('price_per', $res[0]);
-        $set('stock_latest', $res[1]);
-        $set('stock_after_sold', $res[2]);
-        $set('product_name', $bakpia->name ?? '');
-        $set('price_unit', $bakpia->price ?? 0);
+        $state['price_per'] = $price;
+        $state['stock_latest'] = $stockLatest;
+        $state['stock_after_sold'] = $stockAfterSold;
+        $state['product_name'] = $bakpia->name ?? '';
+        $state['price_unit'] = $bakpia->price ?? 0;
+
+        return $state;
+    }
+
+    public static function recalculateLine(Set $set, Get $get): void
+    {
+        $state = static::lineStateFor(
+            $get('product_type'),
+            $get('product_id'),
+            (int) $get('amount'),
+            $get('../../id_outlet'),
+        );
+
+        foreach ($state as $field => $value) {
+            $set($field, $value);
+        }
+    }
+
+    /**
+     * Re-run every line after the outlet changed, so stock fields that were
+     * deferred (no outlet picked yet) get filled in.
+     */
+    public static function recalculateAllLines(Set $set, Get $get): void
+    {
+        $idOutlet = $get('id_outlet');
+
+        foreach (array_keys($get('transaction_details') ?? []) as $key) {
+            $state = static::lineStateFor(
+                $get("transaction_details.{$key}.product_type"),
+                $get("transaction_details.{$key}.product_id"),
+                (int) $get("transaction_details.{$key}.amount"),
+                $idOutlet,
+            );
+
+            foreach ($state as $field => $value) {
+                $set("transaction_details.{$key}.{$field}", $value);
+            }
+        }
     }
 
     public static function calculatePricePerOther($idProduct, $amountPer)
@@ -170,6 +217,15 @@ class TransactionResource extends Resource
                     ->default(fn (): ?string => static::singleOutlet())
                     ->disabled(fn (): bool => static::singleOutlet() !== null)
                     ->dehydrated(true)
+                    ->live()
+                    ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateAllLines($set, $get))
+                    ->helperText(function (): ?string {
+                        if (static::singleOutlet() !== null) {
+                            return null;
+                        }
+
+                        return 'Stock baru dihitung setelah outlet dipilih.';
+                    })
                     ->columnSpan('full')
                     ->required(),
                 Fieldset::make('Data Produk')

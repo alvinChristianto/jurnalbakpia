@@ -193,6 +193,52 @@ class TransactionCreateTest extends TestCase
         $this->assertSame(8, $checkStock);
     }
 
+    public function test_calculate_price_per_without_outlet_defers_stock_instead_of_throwing(): void
+    {
+        $this->seedReferenceRows();
+
+        [$price, $totalStock, $checkStock] = TransactionResource::calculatePricePer(null, $this->bakpiaId, 2);
+
+        $this->assertSame(100000, $price);
+        $this->assertNull($totalStock, 'Stock cannot be resolved until an outlet is picked.');
+        $this->assertNull($checkStock);
+    }
+
+    public function test_amount_entry_without_outlet_defers_stock_then_rechecks_once_outlet_is_picked(): void
+    {
+        $this->seedReferenceRows();
+
+        // admin@gmail.com sees every outlet and has no single pre-filled one,
+        // so the form starts with id_outlet blank — the multi-branch superadmin case.
+        $this->actingAs($this->createAdminUser());
+
+        $component = Livewire::test(CreateTransaction::class)->assertOk();
+
+        $component->fillForm([
+            'id_outlet' => null,
+            'transaction_details' => [
+                ['product_type' => 'BAKPIA', 'product_id' => $this->bakpiaId, 'amount' => 2],
+            ],
+        ]);
+
+        $key = collect($component->instance()->getForm('form')->getRawState()['transaction_details'] ?? [])
+            ->search(fn (array $row): bool => ($row['product_id'] ?? null) == $this->bakpiaId);
+        $this->assertNotFalse($key, 'The filled line must exist before it can be edited.');
+
+        // Typing an amount before any outlet is chosen must not blow up:
+        // the price resolves from the product master, stock stays deferred.
+        $component->set("data.transaction_details.{$key}.amount", 3)
+            ->assertSet("data.transaction_details.{$key}.price_per", 150000)
+            ->assertSet("data.transaction_details.{$key}.product_name", 'Bakpia Keju Panjang')
+            ->assertSet("data.transaction_details.{$key}.stock_latest", null)
+            ->assertSet("data.transaction_details.{$key}.stock_after_sold", null);
+
+        // Picking the outlet afterwards re-runs the on-hand check for that line.
+        $component->set('data.id_outlet', $this->outletId)
+            ->assertSet("data.transaction_details.{$key}.stock_latest", 10)
+            ->assertSet("data.transaction_details.{$key}.stock_after_sold", 7);
+    }
+
     public function test_transaction_model_stores_unified_details_as_snapshot(): void
     {
         $this->seedReferenceRows();
