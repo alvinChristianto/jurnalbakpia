@@ -3,7 +3,7 @@
         <div class="text-sm font-semibold text-gray-950 dark:text-white">
             Stock {{ $outlet->name }}
         </div>
-        <span class="text-xs text-gray-500 dark:text-gray-400">isi 8 / isi 18 per box</span>
+        <span class="text-xs text-gray-500 dark:text-gray-400">jumlah box tersedia</span>
     </div>
 
     <div class="overflow-x-auto">
@@ -11,22 +11,18 @@
             <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-700">
                     <th class="px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Bakpia</th>
-                    <th class="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-400">Isi 8</th>
-                    <th class="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-400">Isi 18</th>
-                    <th class="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-400">Total</th>
+                    <th class="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-400">Stok</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse ($rows as $row)
                     <tr class="border-b border-gray-100 last:border-b-0 dark:border-gray-800">
                         <td class="px-3 py-2 font-medium text-gray-950 dark:text-white">{{ $row['name'] }}</td>
-                        <td class="px-3 py-2 text-right text-gray-700 dark:text-gray-300">{{ number_format($row['box_8']) }}</td>
-                        <td class="px-3 py-2 text-right text-gray-700 dark:text-gray-300">{{ number_format($row['box_18']) }}</td>
-                        <td class="px-3 py-2 text-right font-semibold text-gray-950 dark:text-white">{{ number_format($row['total']) }}</td>
+                        <td class="px-3 py-2 text-right font-semibold text-gray-950 dark:text-white">{{ number_format($row['on_hand']) }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="px-3 py-4 text-center text-gray-500 dark:text-gray-400">
+                        <td colspan="2" class="px-3 py-4 text-center text-gray-500 dark:text-gray-400">
                             Belum ada stock untuk outlet ini.
                         </td>
                     </tr>

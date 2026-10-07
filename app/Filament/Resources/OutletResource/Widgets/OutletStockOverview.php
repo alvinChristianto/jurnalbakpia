@@ -21,26 +21,20 @@ class OutletStockOverview extends Widget
     public function getViewData(): array
     {
         $stockMap = BakpiaStock::query()
-            ->selectRaw("id_bakpia, box_varian,
+            ->selectRaw("id_bakpia,
                 SUM(CASE WHEN status='STOCK_IN'   THEN amount ELSE 0 END)
               - SUM(CASE WHEN status='STOCK_SOLD' THEN amount ELSE 0 END)
               - SUM(CASE WHEN status='RETURNED'   THEN amount ELSE 0 END) AS on_hand")
             ->where('id_outlet', $this->record->id_outlet)
-            ->groupBy('id_bakpia', 'box_varian')
-            ->get()
-            ->keyBy(fn ($row) => "{$row->id_bakpia}|{$row->box_varian}");
+            ->groupBy('id_bakpia')
+            ->pluck('on_hand', 'id_bakpia');
 
         $rows = [];
 
         foreach (Bakpia::all() as $bakpia) {
-            $box8 = (int) ($stockMap["{$bakpia->id}|box_8"]->on_hand ?? 0);
-            $box18 = (int) ($stockMap["{$bakpia->id}|box_18"]->on_hand ?? 0);
-
             $rows[] = [
                 'name' => $bakpia->name,
-                'box_8' => $box8,
-                'box_18' => $box18,
-                'total' => $box8 + $box18,
+                'on_hand' => (int) ($stockMap[$bakpia->id] ?? 0),
             ];
         }
 

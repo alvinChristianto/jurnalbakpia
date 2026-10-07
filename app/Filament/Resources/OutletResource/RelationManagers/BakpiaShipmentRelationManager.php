@@ -24,12 +24,6 @@ class BakpiaShipmentRelationManager extends RelationManager
                     })
                     ->required(),
 
-                Forms\Components\Select::make('box_varian')
-                    ->options([
-                        'box_8' => 'isi 8',
-                        'box_18' => 'isi 18',
-                    ]),
-
                 Forms\Components\TextInput::make('amount')
                     ->required()
                     ->numeric(),
@@ -50,7 +44,6 @@ class BakpiaShipmentRelationManager extends RelationManager
                     ->label('outlet tujuan'),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
-                Tables\Columns\TextColumn::make('box_varian'),
                 Tables\Columns\TextColumn::make('amount')
                     ->numeric()
                     ->sortable(),

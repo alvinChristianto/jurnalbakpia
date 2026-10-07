@@ -26,32 +26,14 @@ class CreateBakpiaTransaction extends CreateRecord
         $data['id_transaction'] = $transformId;
         foreach ($data['transaction_detail'] as $item) {
 
-            $item['box_varian'] = ($item['box_varian'] == '8') ? 'box_8' : (($item['box_varian'] == '18') ? 'box_18' : $item['box_varian']);
-
-            $stockFromGudang = BakpiaStock::where('id_outlet', $data['id_outlet'])
-                ->where('id_bakpia', $item['id_bakpia'])
-                ->where('status', 'STOCK_IN')
-                ->sum('amount');
-
-            $stockSold = BakpiaStock::where('id_outlet', $data['id_outlet'])
-                ->where('id_bakpia', $item['id_bakpia'])
-                ->where('status', 'STOCK_SOLD')
-                ->sum('amount');
-
-            $stockReturned = BakpiaStock::where('id_outlet', $data['id_outlet'])
-                ->where('id_bakpia', $item['id_bakpia'])
-                ->where('status', 'RETURNED')
-                ->sum('amount');
-
-            $totalStock = $stockFromGudang + $stockSold + $stockReturned;
+            $totalStock = BakpiaStock::onHand($data['id_outlet'], (int) $item['id_bakpia']);
             $checkStockBakpia = $totalStock - $item['amount'];
 
-            if ($checkStockBakpia > 0) {
+            if ($checkStockBakpia >= 0) {
                 BakpiaStock::create([
                     'id_outlet' => $data['id_outlet'],
                     'id_bakpia' => $item['id_bakpia'],
                     'id_transaction' => $data['id_transaction'],
-                    'box_varian' => $item['box_varian'],
                     'amount' => $item['amount'],
                     'status' => 'STOCK_SOLD',
                     'stock_record_date' => $now,

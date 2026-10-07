@@ -33,7 +33,6 @@ class BakpiaShipmentRelationManager extends RelationManager
                     ->label('outlet tujuan'),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
-                Tables\Columns\TextColumn::make('box_varian'),
                 Tables\Columns\TextColumn::make('amount')
                     ->numeric()
                     ->sortable(),
@@ -47,12 +46,6 @@ class BakpiaShipmentRelationManager extends RelationManager
                     ->options([
                         'SENT' => 'SENT',
                         'RETURNED' => 'RETURNED',
-                    ]),
-                Tables\Filters\SelectFilter::make('box_varian')
-                    ->label('jenis box')
-                    ->options([
-                        'box_8' => 'box_8',
-                        'box_18' => 'box_18',
                     ]),
             ])
             ->headerActions([

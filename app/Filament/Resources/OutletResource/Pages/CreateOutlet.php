@@ -25,7 +25,7 @@ class CreateOutlet extends CreateRecord
             ->icon('heroicon-m-plus')
             ->keyBindings(['mod+s'])
             ->modalHeading('Buat pengiriman stok awal?')
-            ->modalDescription('Setiap varian bakpia akan mendapatkan pengiriman stok awal ke outlet baru ini beserta pencatatan stok masuk (STOCK_IN).')
+            ->modalDescription('Setiap bakpia akan mendapatkan pengiriman stok awal ke outlet baru ini beserta pencatatan stok masuk (STOCK_IN).')
             ->modalSubmitActionLabel('Konfirmasi')
             ->form([
                 Radio::make('initialize_stock')
@@ -38,8 +38,8 @@ class CreateOutlet extends CreateRecord
                     ->live()
                     ->required(),
                 TextInput::make('amount')
-                    ->label('Jumlah per varian box')
-                    ->helperText('Dibuat untuk box_8 dan box_18 pada setiap varian bakpia.')
+                    ->label('Jumlah per bakpia')
+                    ->helperText('Jumlah box yang dikirim untuk setiap bakpia.')
                     ->numeric()
                     ->default(1000)
                     ->minValue(1)

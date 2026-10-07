@@ -57,10 +57,10 @@ The schema reflects that this is both an internal ERP and an e-commerce backend.
 
 | Model | Table / PK | Key fields | Relationships |
 |---|---|---|---|
-| `Bakpia` | `bakpias` | `name`, `price_8`, `price_18` (per-box price by variant) | `hasMany` production, shipment, stock |
+| `Bakpia` | `bakpias` | `name`, `price` (single per-box price), `description` | `hasMany` production, shipment, stock |
 | `BakpiaProduction` | `bakpia_productions` | `production_status` (`SUCCESS`/`FAIL`), `amount`, `production_date` | `belongsTo` bakpia |
-| `BakpiaStock` | `bakpia_stocks` | `box_varian` (`box_8`/`box_18`), `status` (`STOCK_IN`/`STOCK_SOLD`/`RETURNED`), `amount`, `stock_record_date`, `id_transaction` | `belongsTo` bakpia, outlet |
-| `BakpiaShipment` | `bakpia_shipments` | `status` (`SENT`/`RETURNED`), `box_varian`, `amount`, `shipment_date` | `belongsTo` bakpia, outlet |
+| `BakpiaStock` | `bakpia_stocks` | `box_varian` (nullable, legacy audit only), `status` (`STOCK_IN`/`STOCK_SOLD`/`RETURNED`), `amount`, `stock_record_date`, `id_transaction` | `belongsTo` bakpia, outlet |
+| `BakpiaShipment` | `bakpia_shipments` | `status` (`SENT`/`RETURNED`), `box_varian` (nullable, legacy audit only), `amount`, `shipment_date` | `belongsTo` bakpia, outlet |
 | `BakpiaTransaction` | `bakpia_transactions` / `id_transaction` (string) | `transaction_detail` (JSON line items, price-snapshotted), `total_price`, `discount`, `status` (`PAID`/`REFUND`) | `belongsTo` customer, payment, outlet |
 | `Outlet` | `outlets` / `id_outlet` (string) | `type` (`OFFICIAL`/`CABIN`/`DENTES`), `name`, `phone_number`, `address` | `hasMany` bakpiaTransaction, shipment, stock, otherProductTransaction |
 | `Customer` | `customers` | offline/wholesale buyers | `hasMany` bakpiaTransaction, otherProductTransaction |
@@ -68,9 +68,11 @@ The schema reflects that this is both an internal ERP and an e-commerce backend.
 | `OtherProduct` | non-bakpia merchandise master | | |
 | `OtherProductTransaction` | `other_product_transactions` / `id_transaction` | same POS shape as `BakpiaTransaction` | `belongsTo` customer, payment, outlet |
 
-**Stock is movement-based:** on-hand = sum of `STOCK_IN` − `STOCK_SOLD` − `RETURNED` per (outlet, bakpia, box_varian). See `BakpiaTransactionResource::calculatePricePer()` for the canonical reduction. There is no single "current quantity" column.
+**Stock is movement-based:** on-hand = sum of `STOCK_IN` − `STOCK_SOLD` − `RETURNED` per `(outlet, bakpia)`. `BakpiaStock::onHand()` is the canonical implementation. There is no single "current quantity" column. Rows written before the box-size variant was dropped still carry a `box_varian` value; that column is now an audit trail and its rows are pooled into the same on-hand total.
 
-**Pricing is snapshotted:** `BakpiaTransaction.transaction_detail` (JSON) freezes `price_per` / `price_bakpia` / `name_bakpia` per line, and `total_price` is stored. The price is computed server-side from `Bakpia.price_8`/`price_18` at creation, so it's both snapshotted and authoritative. Editing a `Bakpia` price later does not alter past transactions.
+**Pricing is snapshotted:** `Transaction.transaction_details` (JSON) freezes `product_name` / `price_unit` / `price_per` per line, and `total_price` is stored. The price is computed server-side from `Bakpia.price` at creation, so it's both snapshotted and authoritative. Editing a `Bakpia` price later does not alter past transactions.
+
+**Transaction snapshots are only frozen by convention, not by the code.** Line items are editable on `EditTransaction` / `EditBakpiaTransaction` so a cashier can add or correct a line on a same-day sale. Because `recalculateLine()` recomputes from the *current* master, editing a line on an old record silently reprices that receipt and rewrites `total_price`. If line-level immutability is ever required, it has to be enforced in `EditRecord::handleRecordUpdate()` — the form is not protected today. Legacy `box_varian` values inside stored JSON are read by `App\Support\LegacyIsiLabel` to keep the "isi 8" / "isi 18" label on old receipts; new lines have no variant and render without one.
 
 ### Online e-commerce (consumed by FE-bakpia)
 

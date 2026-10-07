@@ -56,12 +56,6 @@ class MassBakpiaShipment extends Page implements HasForms
                         Select::make('id_bakpia')
                             ->options(Bakpia::pluck('name', 'id'))
                             ->required(),
-                        Select::make('box_varian')
-                            ->options([
-                                'box_8' => 'isi 8',
-                                'box_18' => 'isi 18',
-                            ])
-                            ->required(),
                         TextInput::make('amount')
                             ->numeric()
                             ->minValue(1)

@@ -16,22 +16,22 @@ class BakpiaSeeder extends Seeder
         DB::table('bakpias')->insert([
             [
                 'name' => 'Bakpia Keju',
-                'price_8' => '20000',
-                'price_18' => '40000',
+                'price' => '20000',
+                'description' => 'Bakpia isi keju',
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],
             [
                 'name' => 'Bakpia Abon',
-                'price_8' => '20000',
-                'price_18' => '40000',
+                'price' => '20000',
+                'description' => 'Bakpia isi abon',
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],
             [
                 'name' => 'Bakpia Kacang Almond',
-                'price_8' => '20000',
-                'price_18' => '40000',
+                'price' => '20000',
+                'description' => 'Bakpia isi kacang almond',
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],

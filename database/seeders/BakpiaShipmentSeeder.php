@@ -19,8 +19,7 @@ class BakpiaShipmentSeeder extends Seeder
                 'id_bakpia' => '1',
                 'id_outlet' => 'OUTLET_1',
                 'status' => 'SENT',
-                'box_varian' => 'box_8',
-                'amount' => '20',
+                'amount' => '30',
 
                 'shipment_date' => Carbon::now(),
                 'created_at' => Carbon::now(),
@@ -30,7 +29,6 @@ class BakpiaShipmentSeeder extends Seeder
                 'id_bakpia' => '1',
                 'id_outlet' => 'OUTLET_2',
                 'status' => 'SENT',
-                'box_varian' => 'box_8',
                 'amount' => '15',
 
                 'shipment_date' => Carbon::now(),
@@ -39,21 +37,9 @@ class BakpiaShipmentSeeder extends Seeder
             ],
 
             [
-                'id_bakpia' => '1',
-                'id_outlet' => 'OUTLET_1',
-                'status' => 'SENT',
-                'box_varian' => 'box_18',
-                'amount' => '10',
-
-                'shipment_date' => Carbon::now(),
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now(),
-            ],
-            [
                 'id_bakpia' => '2',
                 'id_outlet' => 'OUTLET_2',
                 'status' => 'SENT',
-                'box_varian' => 'box_18',
                 'amount' => '10',
 
                 'shipment_date' => Carbon::now(),
@@ -64,7 +50,6 @@ class BakpiaShipmentSeeder extends Seeder
                 'id_bakpia' => '2',
                 'id_outlet' => 'OUTLET_1',
                 'status' => 'SENT',
-                'box_varian' => 'box_18',
                 'amount' => '15',
 
                 'shipment_date' => Carbon::now(),

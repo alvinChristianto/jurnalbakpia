@@ -138,7 +138,7 @@
     @if (!empty($record->transaction_detail) )
     @foreach ($transaction_detail as $detail)
     <div class="item-row-fallback">
-        <span class="name-qty">{{ $detail->name_bakpia ?? 'Item Name' }} {{ $detail->isi ?? 'isi 8' }}  ({{$detail->amount ?? 1 }}x)</span>
+        <span class="name-qty">{{ $detail->name_bakpia ?? 'Item Name' }} {{ $detail->isi ?? '' }}  ({{$detail->amount ?? 1 }}x)</span>
         <span class="price">Rp {{ number_format($detail->price_per ?? 0, 0, ',', '.') }}</span>
     </div>
     @endforeach

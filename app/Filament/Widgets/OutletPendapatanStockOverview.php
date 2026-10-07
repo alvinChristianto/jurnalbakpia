@@ -49,13 +49,13 @@ class OutletPendapatanStockOverview extends BaseWidget
     protected function getStats(): array
     {
         $stockMap = BakpiaStock::query()
-            ->selectRaw("id_outlet, id_bakpia, box_varian,
+            ->selectRaw("id_outlet, id_bakpia,
                 SUM(CASE WHEN status='STOCK_IN'   THEN amount ELSE 0 END)
               - SUM(CASE WHEN status='STOCK_SOLD' THEN amount ELSE 0 END)
               - SUM(CASE WHEN status='RETURNED'   THEN amount ELSE 0 END) AS on_hand")
-            ->groupBy('id_outlet', 'id_bakpia', 'box_varian')
+            ->groupBy('id_outlet', 'id_bakpia')
             ->get()
-            ->keyBy(fn ($row) => "{$row->id_outlet}|{$row->id_bakpia}|{$row->box_varian}");
+            ->keyBy(fn ($row): string => "{$row->id_outlet}|{$row->id_bakpia}");
 
         $bakpias = Bakpia::all();
         $year = Carbon::now()->year;
@@ -68,9 +68,8 @@ class OutletPendapatanStockOverview extends BaseWidget
 
             $stockLines = '';
             foreach ($bakpias as $bakpia) {
-                $box8 = $stockMap["{$outlet->id_outlet}|{$bakpia->id}|box_8"]->on_hand ?? 0;
-                $box18 = $stockMap["{$outlet->id_outlet}|{$bakpia->id}|box_18"]->on_hand ?? 0;
-                $stockLines .= "{$bakpia->name} isi 8 ({$box8}) | isi 18 ({$box18}),<br/>";
+                $onHand = (int) ($stockMap["{$outlet->id_outlet}|{$bakpia->id}"]->on_hand ?? 0);
+                $stockLines .= "{$bakpia->name} ({$onHand}),<br/>";
             }
 
             $stats[] = Stat::make('PENDAPATAN DAN STOCK '.strtoupper($outlet->name), '')

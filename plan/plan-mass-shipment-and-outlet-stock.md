@@ -2,6 +2,8 @@
 
 Status: **Draft** (2026-09-24).
 
+> **Superseded in part (2026-09-29)** by `plan-simplify-bakpia-master.md`: items are now `{id_bakpia, amount}` with no `box_varian`, and the stock widget reports a single pooled on-hand count per bakpia.
+
 ## Goal
 
 Add two Filament 3 admin features on the `/admin` panel:

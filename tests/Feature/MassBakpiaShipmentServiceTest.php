@@ -31,9 +31,9 @@ class MassBakpiaShipmentServiceTest extends TestCase
         ]);
 
         $items = [
-            ['id_bakpia' => $bakpiaOne->id, 'box_varian' => 'box_8', 'amount' => 12],
-            ['id_bakpia' => $bakpiaOne->id, 'box_varian' => 'box_18', 'amount' => 7],
-            ['id_bakpia' => $bakpiaTwo->id, 'box_varian' => 'box_8', 'amount' => 3],
+            ['id_bakpia' => $bakpiaOne->id, 'amount' => 12],
+            ['id_bakpia' => $bakpiaOne->id, 'amount' => 7],
+            ['id_bakpia' => $bakpiaTwo->id, 'amount' => 3],
         ];
 
         $shipmentDate = now()->subDay();
@@ -47,7 +47,6 @@ class MassBakpiaShipmentServiceTest extends TestCase
                 'id_bakpia' => $item['id_bakpia'],
                 'id_outlet' => $outlet->id_outlet,
                 'status' => 'SENT',
-                'box_varian' => $item['box_varian'],
                 'amount' => $item['amount'],
                 'description' => 'Kiriman cabang',
                 'shipment_date' => $shipmentDate,
@@ -57,7 +56,6 @@ class MassBakpiaShipmentServiceTest extends TestCase
                 'id_bakpia' => $item['id_bakpia'],
                 'id_outlet' => $outlet->id_outlet,
                 'id_transaction' => '',
-                'box_varian' => $item['box_varian'],
                 'amount' => $item['amount'],
                 'status' => 'STOCK_IN',
             ]);
@@ -80,7 +78,7 @@ class MassBakpiaShipmentServiceTest extends TestCase
         ]);
 
         $items = [
-            ['id_bakpia' => $bakpia->id, 'box_varian' => 'box_8', 'amount' => 5],
+            ['id_bakpia' => $bakpia->id, 'amount' => 5],
         ];
 
         $now = now();
@@ -106,8 +104,8 @@ class MassBakpiaShipmentServiceTest extends TestCase
         ]);
 
         $items = [
-            ['id_bakpia' => $bakpia->id, 'box_varian' => 'box_8', 'amount' => 10],
-            ['id_bakpia' => PHP_INT_MAX, 'box_varian' => 'box_18', 'amount' => 99],
+            ['id_bakpia' => $bakpia->id, 'amount' => 10],
+            ['id_bakpia' => PHP_INT_MAX, 'amount' => 99],
         ];
 
         $this->expectException(QueryException::class);
@@ -122,8 +120,7 @@ class MassBakpiaShipmentServiceTest extends TestCase
     {
         $id = DB::table('bakpias')->insertGetId([
             'name' => $name,
-            'price_8' => 50000,
-            'price_18' => 95000,
+            'price' => 50000,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
