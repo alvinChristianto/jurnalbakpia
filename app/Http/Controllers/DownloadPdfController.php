@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\LegacyIsiLabel;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
@@ -22,20 +23,7 @@ class DownloadPdfController extends Controller
             ->first();
 
         $transaction_detail = json_decode($record->transaction_detail);
-        // dd($transaction_detail);
-        foreach ($transaction_detail as $key => $value) {
-
-            if (isset($value->box_varian)) { // Always good to check if property exists
-                switch ($value->box_varian) {
-                    case 'box_8':
-                        $value->isi = 'isi 8';
-                        break;
-                    case 'box_18':
-                        $value->isi = 'isi 18';
-                        break;
-                }
-            }
-        }
+        $transaction_detail = LegacyIsiLabel::applyAll($transaction_detail);
 
         // PARSING DATE
         $record->created_at = Carbon::parse($record->created_at)->format('d M Y H:i:s');
@@ -61,20 +49,7 @@ class DownloadPdfController extends Controller
             ->first();
 
         $transaction_detail = json_decode($record->other_transaction_detail);
-        // dd($transaction_detail);
-        foreach ($transaction_detail as $key => $value) {
-
-            if (isset($value->box_varian)) { // Not Used
-                switch ($value->box_varian) {
-                    case 'box_8':
-                        $value->isi = 'isi 8';
-                        break;
-                    case 'box_18':
-                        $value->isi = 'isi 18';
-                        break;
-                }
-            }
-        }
+        $transaction_detail = LegacyIsiLabel::applyAll($transaction_detail);
 
         // PARSING DATE
         $record->created_at = Carbon::parse($record->created_at)->format('d M Y H:i:s');
@@ -98,20 +73,7 @@ class DownloadPdfController extends Controller
             ->first();
 
         $transaction_detail = json_decode($record->transaction_details);
-        // dd($transaction_detail);
-        foreach ($transaction_detail as $key => $value) {
-
-            if (isset($value->box_varian)) { // Always good to check if property exists
-                switch ($value->box_varian) {
-                    case 'box_8':
-                        $value->isi = 'isi 8';
-                        break;
-                    case 'box_18':
-                        $value->isi = 'isi 18';
-                        break;
-                }
-            }
-        }
+        $transaction_detail = LegacyIsiLabel::applyAll($transaction_detail);
 
         // PARSING DATE
         $record->created_at = Carbon::parse($record->created_at)->format('d M Y H:i:s');

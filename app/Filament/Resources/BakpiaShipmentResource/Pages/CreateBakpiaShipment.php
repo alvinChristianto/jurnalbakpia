@@ -19,7 +19,6 @@ class CreateBakpiaShipment extends CreateRecord
             'id_outlet' => $data['id_outlet'],
             'id_bakpia' => $data['id_bakpia'],
             'id_transaction' => '',
-            'box_varian' => $data['box_varian'],
             'amount' => $data['amount'],
             'status' => 'STOCK_IN',
             'stock_record_date' => $now,

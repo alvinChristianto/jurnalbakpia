@@ -41,6 +41,10 @@ class Transaction extends Model
     /**
      * Create STOCK_SOLD records for every BAKPIA line with sufficient stock.
      *
+     * Stock is reduced per (outlet, bakpia). Rows written before the box-size
+     * variant was dropped still carry a `box_varian` audit value; those rows
+     * are pooled into the same on-hand total.
+     *
      * @param  array<int, array<string, mixed>>  $details
      * @return array{created: int, insufficient: array<int, array<string, mixed>>}
      */
@@ -55,25 +59,7 @@ class Transaction extends Model
                 continue;
             }
 
-            $stockIn = BakpiaStock::where('id_outlet', $idOutlet)
-                ->where('id_bakpia', $item['product_id'])
-                ->where('box_varian', $item['box_varian'])
-                ->where('status', 'STOCK_IN')
-                ->sum('amount');
-
-            $stockSold = BakpiaStock::where('id_outlet', $idOutlet)
-                ->where('id_bakpia', $item['product_id'])
-                ->where('box_varian', $item['box_varian'])
-                ->where('status', 'STOCK_SOLD')
-                ->sum('amount');
-
-            $stockReturned = BakpiaStock::where('id_outlet', $idOutlet)
-                ->where('id_bakpia', $item['product_id'])
-                ->where('box_varian', $item['box_varian'])
-                ->where('status', 'RETURNED')
-                ->sum('amount');
-
-            $totalStock = $stockIn - $stockSold - $stockReturned;
+            $totalStock = BakpiaStock::onHand($idOutlet, (int) $item['product_id']);
 
             if ($totalStock < $item['amount']) {
                 $insufficient[] = $item;
@@ -85,7 +71,6 @@ class Transaction extends Model
                 'id_outlet' => $idOutlet,
                 'id_bakpia' => $item['product_id'],
                 'id_transaction' => $idTransaction,
-                'box_varian' => $item['box_varian'],
                 'amount' => $item['amount'],
                 'status' => 'STOCK_SOLD',
                 'stock_record_date' => $date,

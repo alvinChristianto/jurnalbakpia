@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\OtherProductTransactionResource\Pages;
-use App\Models\Bakpia;
 use App\Models\OtherProduct;
 use App\Models\OtherProductTransaction;
 use App\Models\Outlet;
@@ -43,44 +42,6 @@ class OtherProductTransactionResource extends Resource
 
     public static function calculatePricePer_other($idOutlet, $idBakpiaPer, $amountPer)
     {
-        $price = 0;
-        // $stockFromGudang = BakpiaStock::all()
-        //     ->where('id_outlet', $idOutlet)
-        //     ->where('id_bakpia', $idBakpiaPer)
-        //     ->where('box_varian', $boxVarianPer)
-        //     ->where('status', 'STOCK_IN')
-        //     ->sum('amount');
-
-        // $stockSold = BakpiaStock::all()
-        //     ->where('id_outlet', $idOutlet)
-        //     ->where('id_bakpia', $idBakpiaPer)
-        //     ->where('box_varian', $boxVarianPer)
-        //     ->where('status', 'STOCK_SOLD')
-        //     ->sum('amount');
-
-        // $stockReturned = BakpiaStock::all()
-        //     ->where('id_outlet', $idOutlet)
-        //     ->where('id_bakpia', $idBakpiaPer)
-        //     ->where('box_varian', $boxVarianPer)
-        //     ->where('status', 'RETURNED')
-        //     ->sum('amount');
-
-        // $totalStock = $stockFromGudang - $stockSold - $stockReturned;
-        // $checkStockBakpia = $totalStock - $amountPer;
-
-        // Log::info($checkStockBakpia . ' | IN ' . $stockFromGudang . ' | SOLD ' . $stockSold . ' | RETN ' . $stockReturned . " || " . $amountPer);
-        // if ($checkStockBakpia < 0) {
-        //     Notification::make()
-        //         ->title('Error') // Set the title of the notification
-        //         ->body('No Bakpia Stock left | ' . $checkStockBakpia) // Set the body of the notification
-        //         ->danger() // Set the type to danger (for error)
-        //         ->send(); // Send the notification
-
-        //     // throw new \Exception('Record creation failed due to no bakpia stock left');
-
-        //     return [0, $totalStock, $checkStockBakpia];
-        // }
-
         $price = OtherProduct::where('id', $idBakpiaPer)->value('price');
 
         Log::info($price);
@@ -143,7 +104,7 @@ class OtherProductTransactionResource extends Resource
                             return $outletName;
                         } else {
 
-                            $userOutlets = Auth::user()->outlets; // Get the authenticated user
+                            $userOutlets = Auth::user()->outlets ?? []; // Get the authenticated user
 
                             $roleOutlets = []; // Use collect for easier manipulation
 

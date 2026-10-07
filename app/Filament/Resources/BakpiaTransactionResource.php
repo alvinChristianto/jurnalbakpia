@@ -42,10 +42,9 @@ class BakpiaTransactionResource extends Resource
 
     protected static ?string $modelLabel = 'Transaksi Bakpia';
 
-    public static function dataBakpia($idB, $var)
+    public static function dataBakpia($idB)
     {
         $idBakpiaPer = $idB;
-        $boxVarianPer = $var;
 
         // You can now use $selectedPacketId to fetch related data or update other fields.
         if ($idBakpiaPer) {
@@ -53,53 +52,28 @@ class BakpiaTransactionResource extends Resource
 
             if ($sparepart) {
                 // Example: Set another TextInput named 'sparepart_price' with the selected sparepart's price
-                if ($boxVarianPer === 'box_8') {
-                    $prc = $sparepart->price_8;
-                } elseif ($boxVarianPer === 'box_18') {
-                    $prc = $sparepart->price_18;
-                }
+                $prc = $sparepart->price;
                 Log::info($sparepart->name);
                 Log::info($prc);
 
                 return [$sparepart->name, $prc];
             }
         } else {
-
             return ['', ''];
         }
     }
 
-    public static function calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer)
+    public static function calculatePricePer($idOutlet, $idBakpiaPer, $amountPer)
     {
-        Log::info($boxVarianPer);
-        $price = 0;
-        $stockFromGudang = BakpiaStock::where('id_outlet', $idOutlet)
-            ->where('id_bakpia', $idBakpiaPer)
-            ->where('box_varian', $boxVarianPer)
-            ->where('status', 'STOCK_IN')
-            ->sum('amount');
-
-        $stockSold = BakpiaStock::where('id_outlet', $idOutlet)
-            ->where('id_bakpia', $idBakpiaPer)
-            ->where('box_varian', $boxVarianPer)
-            ->where('status', 'STOCK_SOLD')
-            ->sum('amount');
-
-        $stockReturned = BakpiaStock::where('id_outlet', $idOutlet)
-            ->where('id_bakpia', $idBakpiaPer)
-            ->where('box_varian', $boxVarianPer)
-            ->where('status', 'RETURNED')
-            ->sum('amount');
-
-        $totalStock = $stockFromGudang - $stockSold - $stockReturned;
+        $totalStock = BakpiaStock::onHand($idOutlet, (int) $idBakpiaPer);
         $checkStockBakpia = $totalStock - $amountPer;
 
-        Log::info($checkStockBakpia.' | IN '.$stockFromGudang.' | SOLD '.$stockSold.' | RETN '.$stockReturned.' || '.$amountPer);
+        Log::info($checkStockBakpia.' || '.$amountPer);
         if ($checkStockBakpia < 0) {
             Notification::make()
                 ->title('Error') // Set the title of the notification
                 ->body('No Bakpia Stock left | '.$checkStockBakpia) // Set the body of the notification
-                ->danger() // Set the type to danger (for error)
+                ->danger() // Set the type of danger for error
                 ->send(); // Send the notification
 
             // throw new \Exception('Record creation failed due to no bakpia stock left');
@@ -107,14 +81,9 @@ class BakpiaTransactionResource extends Resource
             return [0, $totalStock, $checkStockBakpia];
         }
 
-        if ($boxVarianPer === 'box_8') {
-            $price = Bakpia::where('id', $idBakpiaPer)->value('price_8');
-        } elseif ($boxVarianPer === 'box_18') {
-            $price = Bakpia::where('id', $idBakpiaPer)->value('price_18');
-        }
+        $price = Bakpia::where('id', $idBakpiaPer)->value('price') * $amountPer;
 
         Log::info($price);
-        $price = $price * $amountPer;
 
         return [$price, $totalStock, $checkStockBakpia];
     }
@@ -124,7 +93,6 @@ class BakpiaTransactionResource extends Resource
         $tempSumAll = 0;
         foreach ($transactDetail as $key => $bakpiaDetail) {
             $idBakpia = $bakpiaDetail['id_bakpia'];
-            $box_varian = $bakpiaDetail['box_varian'];
             $amountBakpia = $bakpiaDetail['amount'];
             $pricePer = $bakpiaDetail['price_per'];
 
@@ -155,7 +123,7 @@ class BakpiaTransactionResource extends Resource
                             return $outletName;
                         } else {
 
-                            $userOutlets = Auth::user()->outlets; // Get the authenticated user
+                            $userOutlets = Auth::user()->outlets ?? []; // Get the authenticated user
 
                             $roleOutlets = []; // Use collect for easier manipulation
 
@@ -185,13 +153,6 @@ class BakpiaTransactionResource extends Resource
                                     ->searchable()
                                     ->required(),
 
-                                Select::make('box_varian')
-                                    ->label('jenis box')
-                                    ->options([
-                                        'box_8' => 'isi 8',
-                                        'box_18' => 'isi 18',
-                                    ])
-                                    ->required(),
                                 Forms\Components\TextInput::make('amount')
                                     ->label('jumlah box')
                                     ->integer()
@@ -208,12 +169,11 @@ class BakpiaTransactionResource extends Resource
                                             ->icon('heroicon-m-calculator')
                                             ->action(function (Set $set, Get $get, $state) {
                                                 $amountPer = $get('amount');
-                                                $boxVarianPer = $get('box_varian');
                                                 $idBakpiaPer = $get('id_bakpia');
                                                 $idOutlet = $get('../../id_outlet');
 
-                                                $res = static::calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer);
-                                                $res2 = static::dataBakpia($idBakpiaPer, $boxVarianPer);
+                                                $res = static::calculatePricePer($idOutlet, $idBakpiaPer, $amountPer);
+                                                $res2 = static::dataBakpia($idBakpiaPer);
 
                                                 $set('price_per', $res[0]);
 
@@ -229,6 +189,7 @@ class BakpiaTransactionResource extends Resource
 
                                 Forms\Components\Hidden::make('name_bakpia'),
                                 Forms\Components\Hidden::make('price_bakpia'),
+                                Forms\Components\Hidden::make('box_varian'),
                                 Forms\Components\TextInput::make('stock_latest')
                                     ->label('stock terakhir')
                                     ->integer()
@@ -466,7 +427,7 @@ class BakpiaTransactionResource extends Resource
         $adminOutlet = [1, 0];
         $user = auth()->user();
 
-        $outlets = $user->outlets;
+        $outlets = $user->outlets ?? [];
         $idUser = $user->id;
         // dd($idUser);
 

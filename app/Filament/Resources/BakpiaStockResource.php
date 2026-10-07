@@ -55,13 +55,6 @@ class BakpiaStockResource extends Resource
                                 'RETURNED' => 'RETURNED',
                             ])
                             ->required(),
-                        Forms\Components\Select::make('box_varian')
-                            ->label('Varian Box')
-                            ->options([
-                                'box_8' => 'Box 8',
-                                'box_18' => 'Box 18',
-                            ])
-                            ->required(),
                         Forms\Components\TextInput::make('amount')
                             ->label('Jumlah')
                             ->numeric()
@@ -97,8 +90,6 @@ class BakpiaStockResource extends Resource
                                 'STOCK_SOLD' => 'success',
                                 'RETURNED' => 'danger',
                             }),
-                        Infolists\Components\TextEntry::make('box_varian')
-                            ->label('Varian Box'),
                         Infolists\Components\TextEntry::make('amount')
                             ->label('Jumlah')
                             ->numeric(),
@@ -126,7 +117,6 @@ class BakpiaStockResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('outlet.name')
                     ->label('outlet tujuan'),
-                Tables\Columns\TextColumn::make('box_varian'),
                 Tables\Columns\TextColumn::make('amount')
                     ->numeric()
                     ->sortable(),
@@ -149,12 +139,6 @@ class BakpiaStockResource extends Resource
                         'STOCK_IN' => 'STOCK_IN',
                         'STOCK_SOLD' => 'STOCK_SOLD',
                         'RETURNED' => 'RETURNED',
-                    ]),
-                Tables\Filters\SelectFilter::make('box_varian')
-                    ->label('jenis box')
-                    ->options([
-                        'box_8' => 'box_8',
-                        'box_18' => 'box_18',
                     ]),
                 Tables\Filters\SelectFilter::make('id_outlet')
                     ->label('Outlet')

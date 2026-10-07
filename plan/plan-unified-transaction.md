@@ -2,6 +2,8 @@
 
 Status: **Implemented** (2026-09-18). Line item fields use `product_type` / `product_id` / `product_name` (+ `box_varian`, `price_unit` snapshots for BAKPIA). Stock reduction extracted to `Transaction::createStockSoldRecords()` for testability.
 
+> **Superseded in part (2026-09-29)** by `plan-simplify-bakpia-master.md`: `box_varian` is no longer written on new BAKPIA lines, and `price_unit` now comes from the single `Bakpia.price`. The `box_varian` key still exists in rows already stored.
+
 ## Goal
 
 Replace the two separate internal POS transaction Resources (`BakpiaTransactionResource`, `OtherProductTransactionResource`) with **one** Filament page where a single transaction can mix **Bakpia** and **OtherProduct** line items.

@@ -44,32 +44,11 @@ class TransactionResource extends Resource
 
     protected static ?string $modelLabel = 'Transaksi';
 
-    public static function calculatePricePer($idOutlet, $idBakpiaPer, $boxVarianPer, $amountPer)
+    public static function calculatePricePer($idOutlet, $idBakpiaPer, $amountPer)
     {
-        Log::info($boxVarianPer);
-        $price = 0;
-        $stockFromGudang = BakpiaStock::where('id_outlet', $idOutlet)
-            ->where('id_bakpia', $idBakpiaPer)
-            ->where('box_varian', $boxVarianPer)
-            ->where('status', 'STOCK_IN')
-            ->sum('amount');
-
-        $stockSold = BakpiaStock::where('id_outlet', $idOutlet)
-            ->where('id_bakpia', $idBakpiaPer)
-            ->where('box_varian', $boxVarianPer)
-            ->where('status', 'STOCK_SOLD')
-            ->sum('amount');
-
-        $stockReturned = BakpiaStock::where('id_outlet', $idOutlet)
-            ->where('id_bakpia', $idBakpiaPer)
-            ->where('box_varian', $boxVarianPer)
-            ->where('status', 'RETURNED')
-            ->sum('amount');
-
-        $totalStock = $stockFromGudang - $stockSold - $stockReturned;
+        $totalStock = BakpiaStock::onHand($idOutlet, (int) $idBakpiaPer);
         $checkStockBakpia = $totalStock - $amountPer;
 
-        Log::info($checkStockBakpia.' | IN '.$stockFromGudang.' | SOLD '.$stockSold.' | RETN '.$stockReturned.' || '.$amountPer);
         if ($checkStockBakpia < 0) {
             Notification::make()
                 ->title('Error')
@@ -80,14 +59,7 @@ class TransactionResource extends Resource
             return [0, $totalStock, $checkStockBakpia];
         }
 
-        if ($boxVarianPer === 'box_8') {
-            $price = Bakpia::where('id', $idBakpiaPer)->value('price_8');
-        } elseif ($boxVarianPer === 'box_18') {
-            $price = Bakpia::where('id', $idBakpiaPer)->value('price_18');
-        }
-
-        Log::info($price);
-        $price = $price * $amountPer;
+        $price = Bakpia::where('id', $idBakpiaPer)->value('price') * $amountPer;
 
         return [$price, $totalStock, $checkStockBakpia];
     }
@@ -131,15 +103,14 @@ class TransactionResource extends Resource
         }
 
         $idOutlet = $get('../../id_outlet');
-        $boxVarianPer = $get('box_varian');
-        $res = static::calculatePricePer($idOutlet, $productId, $boxVarianPer, $amountPer);
+        $res = static::calculatePricePer($idOutlet, $productId, $amountPer);
         $bakpia = Bakpia::find($productId);
 
         $set('price_per', $res[0]);
         $set('stock_latest', $res[1]);
         $set('stock_after_sold', $res[2]);
         $set('product_name', $bakpia->name ?? '');
-        $set('price_unit', $boxVarianPer === 'box_8' ? $bakpia->price_8 : $bakpia->price_18);
+        $set('price_unit', $bakpia->price ?? 0);
     }
 
     public static function calculatePricePerOther($idProduct, $amountPer)
@@ -235,17 +206,6 @@ class TransactionResource extends Resource
                                     ->live()
                                     ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateLine($set, $get))
                                     ->required(),
-                                Select::make('box_varian')
-                                    ->label('jenis box')
-                                    ->options([
-                                        'box_8' => 'isi 8',
-                                        'box_18' => 'isi 18',
-                                    ])
-                                    ->default('box_8')
-                                    ->visible(fn (Get $get): bool => $get('product_type') === 'BAKPIA')
-                                    ->live()
-                                    ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateLine($set, $get))
-                                    ->required(),
                                 Forms\Components\TextInput::make('amount')
                                     ->label('jumlah')
                                     ->integer()
@@ -259,6 +219,7 @@ class TransactionResource extends Resource
                                     ->dehydrated(true),
                                 Forms\Components\Hidden::make('product_name'),
                                 Forms\Components\Hidden::make('price_unit'),
+                                Forms\Components\Hidden::make('box_varian'),
                                 Forms\Components\TextInput::make('stock_latest')
                                     ->label('stock terakhir')
                                     ->integer()
@@ -509,7 +470,7 @@ class TransactionResource extends Resource
         $adminOutlet = [1, 0];
         $user = Auth::user();
 
-        $outlets = $user->outlets;
+        $outlets = $user->outlets ?? [];
         $idUser = $user->id;
 
         if (! in_array($idUser, $adminOutlet)) {

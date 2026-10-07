@@ -27,12 +27,13 @@ class BakpiaResource extends Resource
                     ->label('Nama Varian Bakpia')
                     ->required()
                     ->maxLength(100),
-                Forms\Components\TextInput::make('price_8')
-                    ->label('harga box isi 8'),
-                // ->money('idr'),
-                Forms\Components\TextInput::make('price_18')
-                    ->label('harga box isi 18'),
-                // ->money('idr')
+                Forms\Components\TextInput::make('price')
+                    ->label('harga jual')
+                    ->prefix('Rp')
+                    ->integer()
+                    ->minValue(1)
+                    ->required(),
+                Forms\Components\Textarea::make('description'),
             ]);
     }
 
@@ -42,12 +43,10 @@ class BakpiaResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nama Varian Bakpia')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('price_8')
-                    ->label('harga box isi 8')
-                    ->money('idr'),
-                Tables\Columns\TextColumn::make('price_18')
-                    ->label('harga box isi 18')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('price')
+                    ->label('harga jual')
                     ->money('idr'),
             ])
             ->filters([
