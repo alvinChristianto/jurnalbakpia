@@ -52,6 +52,7 @@ class MassBakpiaShipment extends Page implements HasForms
                     ->label('Daftar bakpia')
                     ->minItems(1)
                     ->reorderable()
+                    ->grid(3)
                     ->schema([
                         Select::make('id_bakpia')
                             ->options(Bakpia::pluck('name', 'id'))
