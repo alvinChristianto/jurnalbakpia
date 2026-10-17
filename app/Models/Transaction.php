@@ -39,6 +39,29 @@ class Transaction extends Model
     }
 
     /**
+     * Sum of per-line discounts stored inside the JSON line items.
+     * Lines saved before the discount feature have no `discount_per` key.
+     */
+    public function totalLineDiscount(): int
+    {
+        return (int) collect($this->transaction_details ?? [])
+            ->sum(fn (array $item): int => (int) ($item['discount_per'] ?? 0));
+    }
+
+    /**
+     * Grand total after all discounts. Prefers the stored net column; falls
+     * back to computing it for rows saved before that column existed.
+     */
+    public function grandTotal(): int
+    {
+        if ($this->total_price_after_discount !== null) {
+            return (int) $this->total_price_after_discount;
+        }
+
+        return (int) $this->total_price - (int) $this->discount - $this->totalLineDiscount();
+    }
+
+    /**
      * Create STOCK_SOLD records for every BAKPIA line with sufficient stock.
      *
      * Stock is reduced per (outlet, bakpia). Rows written before the box-size

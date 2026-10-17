@@ -10,6 +10,11 @@ class EditTransaction extends EditRecord
 {
     protected static string $resource = TransactionResource::class;
 
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        return TransactionResource::normalizeDiscounts($data);
+    }
+
     protected function getHeaderActions(): array
     {
         return [

@@ -78,7 +78,18 @@ class TransactionResource extends Resource
      *
      * @return array<string, mixed>
      */
-    public static function lineStateFor(?string $productType, mixed $productId, int $amountPer, ?string $idOutlet): array
+    public static function lineStateFor(?string $productType, mixed $productId, int $amountPer, ?string $idOutlet, ?string $discountType = null, mixed $discountValue = null): array
+    {
+        $state = static::baseLineStateFor($productType, $productId, $amountPer, $idOutlet);
+        $state['discount_per'] = static::discountPer((int) $state['price_per'], $discountType, $discountValue);
+
+        return $state;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected static function baseLineStateFor(?string $productType, mixed $productId, int $amountPer, ?string $idOutlet): array
     {
         $state = [
             'price_per' => 0,
@@ -124,6 +135,115 @@ class TransactionResource extends Resource
         return $state;
     }
 
+    /**
+     * Nominal discount amount for a gross value, clamped to 0..gross.
+     * PERCENT accepts decimals (0-100); the result is rounded half-up to
+     * whole rupiah because total_price columns are integers.
+     */
+    public static function discountPer(int|float $gross, ?string $type, mixed $value): int
+    {
+        $value = (float) $value;
+
+        if ($value <= 0 || $gross <= 0) {
+            return 0;
+        }
+
+        $amount = $type === 'NOMINAL'
+            ? min($value, (float) $gross)
+            : $gross * min($value, 100) / 100;
+
+        return (int) min(round($amount), round($gross));
+    }
+
+    /**
+     * Whether the given outlet may use the given discount scope
+     * ('line' or 'total'). An unpicked outlet cannot be verified yet,
+     * so discount inputs stay hidden until one is selected.
+     */
+    public static function outletCan(?string $idOutlet, string $flag): bool
+    {
+        if (blank($idOutlet)) {
+            return false;
+        }
+
+        $column = $flag === 'total' ? 'can_discount_total' : 'can_discount_line';
+
+        return (bool) Outlet::query()->where('id_outlet', $idOutlet)->value($column);
+    }
+
+    /**
+     * Recompute the form-level totals from the current line state.
+     * $prefix is '' from root-context fields and '../../' from inside a
+     * repeater line.
+     */
+    public static function recalculateTotals(Set $set, Get $get, string $prefix = ''): void
+    {
+        $idOutlet = $get($prefix.'id_outlet');
+        $details = $get($prefix.'transaction_details') ?? [];
+        $gross = static::calculatePrice($details);
+
+        $lineDiscount = static::outletCan($idOutlet, 'line')
+            ? collect($details)->sum(fn (array $detail): int => (int) ($detail['discount_per'] ?? 0))
+            : 0;
+
+        $headerDiscount = static::outletCan($idOutlet, 'total')
+            ? static::discountPer($gross, $get($prefix.'discount_type'), $get($prefix.'discount_value'))
+            : 0;
+
+        $set($prefix.'discount', $headerDiscount);
+        $set($prefix.'total_price', $gross);
+        $set($prefix.'total_price_after_discount', max(0, $gross - $headerDiscount - $lineDiscount));
+    }
+
+    /**
+     * Authoritative server-side normalization of all discount fields. Runs on
+     * create and on save: recomputes per-line discounts and both totals from
+     * the stored type/value inputs, and strips discounts when the outlet
+     * does not allow them.
+     *
+     * @return array<string, mixed>
+     */
+    public static function normalizeDiscounts(array $data): array
+    {
+        $outlet = isset($data['id_outlet']) ? Outlet::find($data['id_outlet']) : null;
+        $canLine = (bool) ($outlet->can_discount_line ?? false);
+        $canTotal = (bool) ($outlet->can_discount_total ?? false);
+
+        $gross = 0;
+        $lineDiscount = 0;
+
+        foreach ($data['transaction_details'] ?? [] as $index => $item) {
+            $itemGross = (int) ($item['price_per'] ?? 0);
+            $gross += $itemGross;
+
+            $discountPer = $canLine
+                ? static::discountPer($itemGross, $item['discount_type'] ?? null, $item['discount_value'] ?? 0)
+                : 0;
+
+            $data['transaction_details'][$index]['discount_per'] = $discountPer;
+            $lineDiscount += $discountPer;
+        }
+
+        $headerDiscount = 0;
+
+        if ($canTotal) {
+            $type = $data['discount_type'] ?? null;
+            $value = $data['discount_value'] ?? null;
+
+            // Legacy rows carry a raw nominal discount with no type/value
+            // inputs; keep it as-is (clamped) instead of recomputing to zero.
+            $headerDiscount = (blank($type) && blank($value))
+                ? static::discountPer($gross, 'NOMINAL', $data['discount'] ?? 0)
+                : static::discountPer($gross, $type, $value);
+        }
+
+        $data['discount'] = $headerDiscount;
+        $data['total_price'] = $gross;
+        $data['total_price_after_discount'] = max(0, $gross - $headerDiscount - $lineDiscount);
+
+        return $data;
+    }
+
     public static function recalculateLine(Set $set, Get $get): void
     {
         $state = static::lineStateFor(
@@ -131,33 +251,58 @@ class TransactionResource extends Resource
             $get('product_id'),
             (int) $get('amount'),
             $get('../../id_outlet'),
+            $get('discount_type'),
+            $get('discount_value'),
         );
 
         foreach ($state as $field => $value) {
             $set($field, $value);
         }
+
+        static::recalculateTotals($set, $get, '../../');
     }
 
     /**
      * Re-run every line after the outlet changed, so stock fields that were
-     * deferred (no outlet picked yet) get filled in.
+     * deferred (no outlet picked yet) get filled in and discount values are
+     * cleared when the new outlet forbids them.
      */
     public static function recalculateAllLines(Set $set, Get $get): void
     {
         $idOutlet = $get('id_outlet');
+        $canDiscountLine = static::outletCan($idOutlet, 'line');
 
         foreach (array_keys($get('transaction_details') ?? []) as $key) {
+            $discountType = $get("transaction_details.{$key}.discount_type");
+            $discountValue = $get("transaction_details.{$key}.discount_value");
+
+            if (! $canDiscountLine) {
+                $discountType = 'PERCENT';
+                $discountValue = 0;
+                $set("transaction_details.{$key}.discount_type", $discountType);
+                $set("transaction_details.{$key}.discount_value", $discountValue);
+            }
+
             $state = static::lineStateFor(
                 $get("transaction_details.{$key}.product_type"),
                 $get("transaction_details.{$key}.product_id"),
                 (int) $get("transaction_details.{$key}.amount"),
                 $idOutlet,
+                $discountType,
+                $discountValue,
             );
 
             foreach ($state as $field => $value) {
                 $set("transaction_details.{$key}.{$field}", $value);
             }
         }
+
+        if (! static::outletCan($idOutlet, 'total')) {
+            $set('discount_type', 'PERCENT');
+            $set('discount_value', 0);
+        }
+
+        static::recalculateTotals($set, $get);
     }
 
     public static function calculatePricePerOther($idProduct, $amountPer)
@@ -286,6 +431,30 @@ class TransactionResource extends Resource
                                     ->integer()
                                     ->disabled()
                                     ->visible(fn (Get $get): bool => $get('product_type') === 'BAKPIA'),
+                                Forms\Components\Grid::make()
+                                    ->columns(2)
+                                    ->schema([
+                                        Forms\Components\ToggleButtons::make('discount_type')
+                                            ->label('tipe diskon')
+                                            ->options([
+                                                'PERCENT' => 'Persen',
+                                                'NOMINAL' => 'Nominal',
+                                            ])
+                                            ->inline()
+                                            ->default('PERCENT')
+                                            ->live()
+                                            ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateLine($set, $get)),
+                                        Forms\Components\TextInput::make('discount_value')
+                                            ->label('nilai diskon')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue(fn (Get $get): float => ($get('discount_type') ?? 'PERCENT') === 'PERCENT' ? 100 : (float) ($get('price_per') ?? 0))
+                                            ->live()
+                                            ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateLine($set, $get)),
+                                    ])
+                                    ->columnSpan('full')
+                                    ->visible(fn (Get $get): bool => static::outletCan($get('../../id_outlet'), 'line')),
+                                Forms\Components\Hidden::make('discount_per'),
                             ])
                             ->columnSpan('full')
                             ->columns(['md' => 3, 'xl' => 5])
@@ -294,25 +463,44 @@ class TransactionResource extends Resource
                 Fieldset::make('Data Pembayaran')
                     ->schema([
                         Forms\Components\TextInput::make('total_price')
-                            ->label('total harga yang harus dibayar')
+                            ->label('total harga sebelum diskon')
                             ->numeric()
-                            // enable for edit for emergency discount
-                            // ->disabled()
+                            ->disabled()
                             ->prefix('Rp')
                             ->dehydrated(true)
-                            ->reactive()
-                            ->required()
                             ->suffixAction(
                                 Action::make('sumPrice')
                                     ->icon('heroicon-m-calculator')
                                     ->action(function (Set $set, Get $get) {
-                                        $transaction_details = $get('transaction_details');
-
-                                        $priceTotl = static::calculatePrice($transaction_details);
-                                        Log::info($priceTotl);
-                                        $set('total_price', $priceTotl);
+                                        static::recalculateTotals($set, $get);
                                     })
                             ),
+                        Forms\Components\ToggleButtons::make('discount_type')
+                            ->label('diskon transaksi')
+                            ->options([
+                                'PERCENT' => 'Persen',
+                                'NOMINAL' => 'Nominal',
+                            ])
+                            ->inline()
+                            ->default('PERCENT')
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateTotals($set, $get))
+                            ->visible(fn (Get $get): bool => static::outletCan($get('id_outlet'), 'total')),
+                        Forms\Components\TextInput::make('discount_value')
+                            ->label('nilai diskon transaksi')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(fn (Get $get): float => ($get('discount_type') ?? 'PERCENT') === 'PERCENT' ? 100 : (float) ($get('total_price') ?? 0))
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateTotals($set, $get))
+                            ->visible(fn (Get $get): bool => static::outletCan($get('id_outlet'), 'total')),
+                        Forms\Components\Hidden::make('discount'),
+                        Forms\Components\TextInput::make('total_price_after_discount')
+                            ->label('total harga setelah diskon')
+                            ->numeric()
+                            ->disabled()
+                            ->prefix('Rp')
+                            ->dehydrated(true),
                         Select::make('id_payment')
                             ->label('metode pembayaran')
                             ->relationship('payment', 'name')
@@ -417,6 +605,19 @@ class TransactionResource extends Resource
                     ->prefix('Rp ')
                     ->numeric()
                     ->summarize(Sum::make()),
+                Tables\Columns\TextColumn::make('discount')
+                    ->label('diskon')
+                    ->money('idr')
+                    ->prefix('Rp ')
+                    ->numeric()
+                    ->default(0),
+                Tables\Columns\TextColumn::make('total_price_after_discount')
+                    ->label('total (setelah diskon)')
+                    ->money('idr')
+                    ->prefix('Rp ')
+                    ->numeric()
+                    ->default(0)
+                    ->summarize(Sum::make()),
             ])
             ->filters(
                 [
@@ -475,6 +676,10 @@ class TransactionResource extends Resource
                 'id_customer',
                 'id_payment',
                 'total_price',
+                'discount',
+                'discount_type',
+                'discount_value',
+                'total_price_after_discount',
                 'status',
                 'transaction_details',
                 'created_at',
@@ -499,6 +704,8 @@ class TransactionResource extends Resource
                             Column::make('customer.name'),
                             Column::make('payment.name'),
                             Column::make('total_price'),
+                            Column::make('discount'),
+                            Column::make('total_price_after_discount'),
                         ]),
                     ]),
                 ]),

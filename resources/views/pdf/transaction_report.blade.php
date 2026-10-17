@@ -74,6 +74,9 @@
     <div class="item-row-fallback">
         <span class="name-qty">{{ $detail->product_name ?? 'Item Name' }}@isset($detail->isi) {{ $detail->isi }}@endisset ({{ $detail->amount ?? 1 }}x)</span>
         <span class="price">Rp {{ number_format($detail->price_per ?? 0, 0, ',', '.') }}</span>
+        @if ((int) ($detail->discount_per ?? 0) > 0)
+        <span class="price" style="font-size: 30px;">Diskon item -Rp {{ number_format($detail->discount_per, 0, ',', '.') }}</span>
+        @endif
     </div>
     @endforeach
     @else
@@ -85,11 +88,18 @@
     <p class="right bold" style="font-size: 34px">
         Total: Rp {{ number_format($record->total_price ?? 0, 0, ',', '.') }}
     </p>
+    @if ($lineDiscountTotal > 0)
     <p class="right" style="font-size: 32px;">
-        Diskon: Rp {{ number_format($record->discount ?? 0, 0, ',', '.') }}
+        Diskon item: Rp {{ number_format($lineDiscountTotal, 0, ',', '.') }}
     </p>
+    @endif
+    @if ((int) ($record->discount ?? 0) > 0)
+    <p class="right" style="font-size: 32px;">
+        Diskon transaksi: Rp {{ number_format($record->discount, 0, ',', '.') }}
+    </p>
+    @endif
     <p class="right bold" style="font-size: 40px;">
-        Grand Total: Rp {{ number_format(($record->total_price ?? 0) - ($record->discount ?? 0), 0, ',', '.') }}
+        Grand Total: Rp {{ number_format($grandTotal, 0, ',', '.') }}
     </p>
 
     <div class="divider"></div>
