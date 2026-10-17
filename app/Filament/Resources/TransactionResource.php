@@ -296,7 +296,8 @@ class TransactionResource extends Resource
                         Forms\Components\TextInput::make('total_price')
                             ->label('total harga yang harus dibayar')
                             ->numeric()
-                            ->disabled()
+                            // enable for edit for emergency discount
+                            // ->disabled()
                             ->prefix('Rp')
                             ->dehydrated(true)
                             ->reactive()
