@@ -79,6 +79,8 @@ class DownloadPdfController extends Controller
             ->sum(fn ($detail): int => (int) ($detail->discount_per ?? 0));
         $grandTotal = $record->total_price_after_discount
             ?? ((int) $record->total_price - (int) $record->discount - $lineDiscountTotal);
+        $totalDiscount = (int) ($record->total_discount ?? ((int) $record->discount + $lineDiscountTotal));
+        $totalItems = (int) collect($transaction_detail)->sum(fn ($detail): int => (int) ($detail->amount ?? 1));
 
         // PARSING DATE
         $record->created_at = Carbon::parse($record->created_at)->format('d M Y H:i:s');
@@ -86,7 +88,7 @@ class DownloadPdfController extends Controller
         // dd($record);
 
         $pdf = App::make('dompdf.wrapper');
-        $pdf->loadView('pdf.transaction_report', compact('record', 'transaction_detail', 'lineDiscountTotal', 'grandTotal')); // Pass the variable $record to the blade file
+        $pdf->loadView('pdf.transaction_report', compact('record', 'transaction_detail', 'lineDiscountTotal', 'grandTotal', 'totalDiscount', 'totalItems')); // Pass the variable $record to the blade file
 
         return $pdf->stream(); // renders the PDF in the browser
     }

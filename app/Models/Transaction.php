@@ -49,6 +49,20 @@ class Transaction extends Model
     }
 
     /**
+     * Combined discount: header discount plus every per-line discount.
+     * Prefers the stored column; falls back to computing it for rows saved
+     * before that column existed.
+     */
+    public function totalDiscount(): int
+    {
+        if ($this->total_discount !== null) {
+            return (int) $this->total_discount;
+        }
+
+        return (int) $this->discount + $this->totalLineDiscount();
+    }
+
+    /**
      * Grand total after all discounts. Prefers the stored net column; falls
      * back to computing it for rows saved before that column existed.
      */

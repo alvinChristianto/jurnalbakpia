@@ -82,6 +82,7 @@ class TransactionResource extends Resource
     {
         $state = static::baseLineStateFor($productType, $productId, $amountPer, $idOutlet);
         $state['discount_per'] = static::discountPer((int) $state['price_per'], $discountType, $discountValue);
+        $state['price_after_discount'] = max(0, (int) $state['price_per'] - $state['discount_per']);
 
         return $state;
     }
@@ -192,6 +193,7 @@ class TransactionResource extends Resource
 
         $set($prefix.'discount', $headerDiscount);
         $set($prefix.'total_price', $gross);
+        $set($prefix.'total_discount', $headerDiscount + $lineDiscount);
         $set($prefix.'total_price_after_discount', max(0, $gross - $headerDiscount - $lineDiscount));
     }
 
@@ -221,6 +223,7 @@ class TransactionResource extends Resource
                 : 0;
 
             $data['transaction_details'][$index]['discount_per'] = $discountPer;
+            $data['transaction_details'][$index]['price_after_discount'] = max(0, $itemGross - $discountPer);
             $lineDiscount += $discountPer;
         }
 
@@ -239,6 +242,7 @@ class TransactionResource extends Resource
 
         $data['discount'] = $headerDiscount;
         $data['total_price'] = $gross;
+        $data['total_discount'] = $headerDiscount + $lineDiscount;
         $data['total_price_after_discount'] = max(0, $gross - $headerDiscount - $lineDiscount);
 
         return $data;
@@ -432,7 +436,8 @@ class TransactionResource extends Resource
                                     ->disabled()
                                     ->visible(fn (Get $get): bool => $get('product_type') === 'BAKPIA'),
                                 Forms\Components\Grid::make()
-                                    ->columns(2)
+                                    ->columns(['default' => 2])
+                                    ->columnSpan('full')
                                     ->schema([
                                         Forms\Components\ToggleButtons::make('discount_type')
                                             ->label('tipe diskon')
@@ -443,7 +448,10 @@ class TransactionResource extends Resource
                                             ->inline()
                                             ->default('PERCENT')
                                             ->live()
-                                            ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateLine($set, $get)),
+                                            ->afterStateUpdated(function (Set $set, Get $get): void {
+                                                $set('discount_value', null);
+                                                static::recalculateLine($set, $get);
+                                            }),
                                         Forms\Components\TextInput::make('discount_value')
                                             ->label('nilai diskon')
                                             ->numeric()
@@ -452,7 +460,6 @@ class TransactionResource extends Resource
                                             ->live()
                                             ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateLine($set, $get)),
                                     ])
-                                    ->columnSpan('full')
                                     ->visible(fn (Get $get): bool => static::outletCan($get('../../id_outlet'), 'line')),
                                 Forms\Components\Hidden::make('discount_per'),
                             ])
@@ -475,26 +482,40 @@ class TransactionResource extends Resource
                                         static::recalculateTotals($set, $get);
                                     })
                             ),
-                        Forms\Components\ToggleButtons::make('discount_type')
-                            ->label('diskon transaksi')
-                            ->options([
-                                'PERCENT' => 'Persen',
-                                'NOMINAL' => 'Nominal',
-                            ])
-                            ->inline()
-                            ->default('PERCENT')
-                            ->live()
-                            ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateTotals($set, $get))
-                            ->visible(fn (Get $get): bool => static::outletCan($get('id_outlet'), 'total')),
-                        Forms\Components\TextInput::make('discount_value')
-                            ->label('nilai diskon transaksi')
-                            ->numeric()
-                            ->minValue(0)
-                            ->maxValue(fn (Get $get): float => ($get('discount_type') ?? 'PERCENT') === 'PERCENT' ? 100 : (float) ($get('total_price') ?? 0))
-                            ->live()
-                            ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateTotals($set, $get))
-                            ->visible(fn (Get $get): bool => static::outletCan($get('id_outlet'), 'total')),
+                        Forms\Components\Grid::make()
+                            ->columns(['default' => 2])
+                            ->columnSpan('full')
+                            ->schema([
+                                Forms\Components\ToggleButtons::make('discount_type')
+                                    ->label('diskon transaksi')
+                                    ->options([
+                                        'PERCENT' => 'Persen',
+                                        'NOMINAL' => 'Nominal',
+                                    ])
+                                    ->inline()
+                                    ->default('PERCENT')
+                                    ->live()
+                                    ->afterStateUpdated(function (Set $set, Get $get): void {
+                                        $set('discount_value', null);
+                                        static::recalculateTotals($set, $get);
+                                    })
+                                    ->visible(fn (Get $get): bool => static::outletCan($get('id_outlet'), 'total')),
+                                Forms\Components\TextInput::make('discount_value')
+                                    ->label('nilai diskon transaksi')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue(fn (Get $get): float => ($get('discount_type') ?? 'PERCENT') === 'PERCENT' ? 100 : (float) ($get('total_price') ?? 0))
+                                    ->live()
+                                    ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateTotals($set, $get))
+                                    ->visible(fn (Get $get): bool => static::outletCan($get('id_outlet'), 'total')),
+                            ]),
                         Forms\Components\Hidden::make('discount'),
+                        Forms\Components\TextInput::make('total_discount')
+                            ->label('total diskon (item + transaksi)')
+                            ->numeric()
+                            ->disabled()
+                            ->prefix('Rp')
+                            ->dehydrated(true),
                         Forms\Components\TextInput::make('total_price_after_discount')
                             ->label('total harga setelah diskon')
                             ->numeric()
@@ -611,6 +632,12 @@ class TransactionResource extends Resource
                     ->prefix('Rp ')
                     ->numeric()
                     ->default(0),
+                Tables\Columns\TextColumn::make('total_discount')
+                    ->label('total diskon')
+                    ->money('idr')
+                    ->prefix('Rp ')
+                    ->numeric()
+                    ->default(0),
                 Tables\Columns\TextColumn::make('total_price_after_discount')
                     ->label('total (setelah diskon)')
                     ->money('idr')
@@ -679,6 +706,7 @@ class TransactionResource extends Resource
                 'discount',
                 'discount_type',
                 'discount_value',
+                'total_discount',
                 'total_price_after_discount',
                 'status',
                 'transaction_details',
@@ -705,6 +733,7 @@ class TransactionResource extends Resource
                             Column::make('payment.name'),
                             Column::make('total_price'),
                             Column::make('discount'),
+                            Column::make('total_discount'),
                             Column::make('total_price_after_discount'),
                         ]),
                     ]),

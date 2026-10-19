@@ -101,6 +101,9 @@ class TransactionDiscountTest extends TestCase
         $this->assertSame('NOMINAL', $fresh->discount_type);
         $this->assertSame(85000, (int) $fresh->total_price_after_discount);
         $this->assertSame(10000, (int) $fresh->transaction_details[0]['discount_per']);
+        $this->assertSame(90000, (int) $fresh->transaction_details[0]['price_after_discount']);
+        $this->assertSame(15000, (int) $fresh->total_discount);
+        $this->assertSame(15000, $fresh->totalDiscount());
         $this->assertSame(85000, $fresh->grandTotal());
         $this->assertSame(10000, $fresh->totalLineDiscount());
 
@@ -145,6 +148,8 @@ class TransactionDiscountTest extends TestCase
         $this->assertSame(45000, (int) $fresh->total_price);
         $this->assertSame(0, (int) $fresh->discount);
         $this->assertSame(0, (int) $fresh->transaction_details[0]['discount_per']);
+        $this->assertSame(45000, (int) $fresh->transaction_details[0]['price_after_discount']);
+        $this->assertSame(0, (int) $fresh->total_discount);
         $this->assertSame(45000, (int) $fresh->total_price_after_discount);
     }
 
@@ -224,7 +229,9 @@ class TransactionDiscountTest extends TestCase
         $this->assertSame(100000, (int) $fresh->total_price);
         $this->assertSame(10000, (int) $fresh->discount);
         $this->assertSame(90000, (int) $fresh->total_price_after_discount);
+        $this->assertSame(10000, (int) $fresh->total_discount);
         $this->assertSame(0, (int) $fresh->transaction_details[0]['discount_per']);
+        $this->assertSame(100000, (int) $fresh->transaction_details[0]['price_after_discount']);
         $this->assertSame('Bakpia Keju Panjang', $fresh->transaction_details[0]['product_name']);
     }
 
@@ -241,10 +248,98 @@ class TransactionDiscountTest extends TestCase
 
         $this->assertSame(93000, $transaction->grandTotal(), 'Fallback computes gross minus discounts.');
         $this->assertSame(2000, $transaction->totalLineDiscount());
+        $this->assertSame(7000, $transaction->totalDiscount(), 'Fallback computes header plus line discounts.');
 
         $transaction->total_price_after_discount = 90000;
 
         $this->assertSame(90000, $transaction->grandTotal(), 'Stored column wins when present.');
+
+        $transaction->total_discount = 6500;
+
+        $this->assertSame(6500, $transaction->totalDiscount(), 'Stored column wins when present.');
+    }
+
+    public function test_two_discounted_lines_and_percent_header_roll_up_to_total_discount(): void
+    {
+        $this->seedReferenceRows();
+        $this->actingAs($this->createAdminUser());
+
+        // Line 1: 2 x 50000 = 100000 gross, 10% = 10000 off (net 90000).
+        // Line 2: 3 x 15000 = 45000 gross, 2000 nominal off (net 43000).
+        // Header: 5% of 145000 = 7250. Total discount = 10000 + 2000 + 7250 = 19250.
+        $component = Livewire::test(CreateTransaction::class);
+        $key = $this->firstLineKey($component);
+
+        $component
+            ->set('data.id_outlet', $this->outletId)
+            ->set("data.transaction_details.{$key}.product_id", $this->bakpiaId)
+            ->set("data.transaction_details.{$key}.amount", 2)
+            ->set("data.transaction_details.{$key}.discount_type", 'PERCENT')
+            ->set("data.transaction_details.{$key}.discount_value", 10);
+
+        $component->callFormComponentAction('transaction_details', 'add');
+
+        $details = $component->instance()->getForm('form')->getRawState()['transaction_details'];
+        $secondKey = collect(array_keys($details))->first(fn (string $candidate): bool => $candidate !== $key);
+        $this->assertNotNull($secondKey, 'A second repeater line must exist after the add action.');
+
+        $component
+            ->set("data.transaction_details.{$secondKey}.product_type", 'OTHER')
+            ->set("data.transaction_details.{$secondKey}.product_id", $this->otherProductId())
+            ->set("data.transaction_details.{$secondKey}.amount", 3)
+            ->set("data.transaction_details.{$secondKey}.discount_type", 'NOMINAL')
+            ->set("data.transaction_details.{$secondKey}.discount_value", 2000)
+            ->set('data.discount_type', 'PERCENT')
+            ->set('data.discount_value', 5)
+            ->set('data.id_payment', $this->paymentId)
+            ->set('data.id_customer', $this->customerId)
+            ->call('create')
+            ->assertHasNoErrors();
+
+        $fresh = Transaction::query()->latest('created_at')->first();
+        $lines = collect($fresh->transaction_details);
+
+        $this->assertSame(145000, (int) $fresh->total_price);
+        $this->assertSame(7250, (int) $fresh->discount);
+        $this->assertSame(125750, (int) $fresh->total_price_after_discount);
+        $this->assertSame(19250, (int) $fresh->total_discount);
+        $this->assertSame(19250, $fresh->totalDiscount());
+        $this->assertSame(90000, (int) $lines->firstWhere('product_type', 'BAKPIA')['price_after_discount']);
+        $this->assertSame(43000, (int) $lines->firstWhere('product_type', 'OTHER')['price_after_discount']);
+    }
+
+    public function test_switching_discount_type_clears_the_value(): void
+    {
+        $this->seedReferenceRows();
+        $this->actingAs($this->createAdminUser());
+
+        $component = Livewire::test(CreateTransaction::class);
+        $key = $this->firstLineKey($component);
+
+        $component
+            ->set('data.id_outlet', $this->outletId)
+            ->set("data.transaction_details.{$key}.product_id", $this->bakpiaId)
+            ->set("data.transaction_details.{$key}.amount", 2)
+            ->set("data.transaction_details.{$key}.discount_type", 'PERCENT')
+            ->set("data.transaction_details.{$key}.discount_value", 10);
+
+        // Switching the line type wipes the value and zeroes the discount.
+        $component->set("data.transaction_details.{$key}.discount_type", 'NOMINAL');
+
+        $lineState = $component->instance()->getForm('form')->getRawState()['transaction_details'][$key];
+
+        $this->assertNull($lineState['discount_value']);
+        $this->assertSame(0, (int) $lineState['discount_per']);
+        $this->assertSame(100000, (int) $lineState['price_after_discount'], 'Gross is restored when the value is cleared.');
+
+        // Same behaviour for the transaction-level discount.
+        $component->set('data.discount_value', 5000);
+        $component->set('data.discount_type', 'PERCENT');
+
+        $rootState = $component->instance()->getForm('form')->getRawState();
+
+        $this->assertNull($rootState['discount_value']);
+        $this->assertSame(0, (int) $rootState['discount']);
     }
 
     private int $otherProductCache = 0;
