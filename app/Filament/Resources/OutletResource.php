@@ -75,6 +75,12 @@ class OutletResource extends Resource
                             $component->state($hour['end'] ?? null);
                         }
                     }),
+                Forms\Components\Toggle::make('can_discount_line')
+                    ->label('Boleh diskon per item')
+                    ->default(true),
+                Forms\Components\Toggle::make('can_discount_total')
+                    ->label('Boleh diskon total')
+                    ->default(true),
             ]);
     }
 
@@ -93,6 +99,12 @@ class OutletResource extends Resource
                     ->formatStateUsing(fn ($state) => is_array($state)
                         ? (($state['start'] ?? '').' – '.($state['end'] ?? ''))
                         : $state),
+                Tables\Columns\IconColumn::make('can_discount_line')
+                    ->label('Diskon Item')
+                    ->boolean(),
+                Tables\Columns\IconColumn::make('can_discount_total')
+                    ->label('Diskon Total')
+                    ->boolean(),
             ])
             ->filters([
                 //

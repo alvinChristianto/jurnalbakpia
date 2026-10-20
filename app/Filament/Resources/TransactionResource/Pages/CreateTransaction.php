@@ -24,6 +24,8 @@ class CreateTransaction extends CreateRecord
 
         $data['id_transaction'] = 'TRX_'.$year.$month.$day.$randomDigits;
 
+        $data = TransactionResource::normalizeDiscounts($data);
+
         $result = Transaction::createStockSoldRecords(
             idOutlet: $data['id_outlet'],
             idTransaction: $data['id_transaction'],

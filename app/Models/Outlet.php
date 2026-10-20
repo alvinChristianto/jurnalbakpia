@@ -29,11 +29,14 @@ class Outlet extends Model
     protected $fillable = [
         'name', 'type', 'address', 'phone_number', 'email',
         'operational_day', 'operational_hour',
+        'can_discount_line', 'can_discount_total',
     ];
 
     protected $casts = [
         'operational_day' => 'array',
         'operational_hour' => 'array',
+        'can_discount_line' => 'boolean',
+        'can_discount_total' => 'boolean',
     ];
 
     public function scopeOfficial(Builder $query): Builder
