@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Exports\TransactionDetailExport;
 use App\Filament\Resources\TransactionResource\Pages;
 use App\Models\Bakpia;
 use App\Models\BakpiaStock;
@@ -736,6 +737,9 @@ class TransactionResource extends Resource
                             Column::make('total_discount'),
                             Column::make('total_price_after_discount'),
                         ]),
+                        TransactionDetailExport::make('transaction-detail')
+                            ->label('Transaksi Detail')
+                            ->withFilename('transaksi-detail'),
                     ]),
                 ]),
             ])
