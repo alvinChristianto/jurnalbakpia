@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\BakpiaStock;
 use App\Models\User;
+use App\Models\BakpiaStock;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class BakpiaStockPolicy

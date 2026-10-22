@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\OlProduct;
 use App\Models\User;
+use App\Models\OlProduct;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class OlProductPolicy

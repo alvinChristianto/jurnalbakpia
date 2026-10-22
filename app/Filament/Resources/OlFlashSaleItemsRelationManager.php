@@ -5,14 +5,15 @@ namespace App\Filament\Resources;
 use App\Enums\DiscountType;
 use App\Models\OlFlashSaleItem;
 use App\Models\OlProduct;
-use Filament\Forms\Components\Get;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
@@ -164,6 +165,11 @@ class OlFlashSaleItemsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->headerActions([
+                CreateAction::make()
+                    ->label('Tambah Produk')
+                    ->createAnother(false),
+            ])
             ->columns([
                 TextColumn::make('product.name')
                     ->label('Produk')
@@ -171,7 +177,7 @@ class OlFlashSaleItemsRelationManager extends RelationManager
 
                 TextColumn::make('discount_type')
                     ->label('Tipe Diskon')
-                    ->formatStateUsing(fn (string $state): string => DiscountType::from($state)->label()),
+                    ->formatStateUsing(fn ($state): string => ($state instanceof DiscountType ? $state : DiscountType::from($state))->label()),
 
                 TextColumn::make('discount_value')
                     ->label('Nilai Diskon')

@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\OlFlashSale;
 use App\Models\User;
+use App\Models\OlFlashSale;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class OlFlashSalePolicy

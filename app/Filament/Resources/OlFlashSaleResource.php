@@ -105,7 +105,7 @@ class OlFlashSaleResource extends Resource
         $duration = (int) $get('duration_minutes');
 
         $effectiveStart = null;
-        if ($record && $record->exists && $record->status === FlashSaleStatus::PUBLISHED->value) {
+        if ($record && $record->exists && $record->status === FlashSaleStatus::PUBLISHED) {
             $effectiveStart = $record->start_at;
         } elseif (filled($startAt)) {
             $effectiveStart = Carbon::parse($startAt);
@@ -133,8 +133,8 @@ class OlFlashSaleResource extends Resource
 
                 TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => FlashSaleStatus::from($state)->label())
-                    ->color(fn (string $state): string => FlashSaleStatus::from($state)->color()),
+                    ->formatStateUsing(fn ($state): string => ($state instanceof FlashSaleStatus ? $state : FlashSaleStatus::from($state))->label())
+                    ->color(fn ($state): string => ($state instanceof FlashSaleStatus ? $state : FlashSaleStatus::from($state))->color()),
 
                 TextColumn::make('start_at')
                     ->dateTime('d M Y, H:i')

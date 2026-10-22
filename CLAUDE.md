@@ -86,7 +86,7 @@ The schema reflects that this is both an internal ERP and an e-commerce backend.
 |---|---|---|
 | `OlProduct` | `ol_products` | products exposed via the public API; `hasMany` `OlEcommerceTransactionDetail` |
 | `OlCustomer` | `ol_customers` | storefront customers (Google OAuth users) |
-| `OlEcommerceTransaction` / `OlEcommerceTransactionDetail` | `ol_ecommerce_transactions*` | online orders; UUID PKs. Detail freezes `product_name_snapshot` + `price_per_item`. ⚠️ Unlike the internal POS, the snapshot price is taken from the **frontend request payload** (`OrderController::getTokenMidtransv1`), not recomputed from `OlProduct` — client-supplied and currently trusted. |
+| `OlEcommerceTransaction` / `OlEcommerceTransactionDetail` | `ol_ecommerce_transactions*` | online orders; UUID PKs. Detail freezes `product_name_snapshot`, `price_per_item`, and discount fields (`original_price`, `discount_type`, `discount_amount`, `flash_sale_item_id`). Pricing is **server-authoritative** — `OrderController::getTokenMidtransv1` re-prices against the current catalog (`OlPricingService`); a stale/mismatched total is rejected with a `price_mismatch` 422 and flash-sale quota conflicts with a `flash_sale` 422. |
 | `OlShipmentEvent` | `ol_shipment_events` | shipment-status audit log written by `KiriminajaWebhookController` — UUID PK, `invoice_number`, `event_type`, `awb`, `event_at`/`shipped_at`/`finished_at`/`returned_at`, `reason`, `raw_payload` (JSON); `belongsTo` `OlEcommerceTransaction` via `invoice_number`. |
 
 ### Rules of thumb
@@ -102,6 +102,7 @@ Current surface (keep it small):
 | Method | Path | Controller | Auth |
 |---|---|---|---|
 | GET | `/api/bakpias`, `/api/products` | `BakpiaController@index` | public |
+| GET | `/api/flash-sales/active`, `/api/flash-sales/upcoming` | `FlashSaleController` | public (active sale is backend-cached 30 s) |
 | GET | `/api/outlets` | `BakpiaController@outlets` | public (checkout pickup selector) |
 | GET | `/api/checkout/config` | `OrderController@checkoutConfig` | public (admin-fee percent/cap, display only — backend is authoritative) |
 | POST | `/api/register` | `AuthController@register` | public |
