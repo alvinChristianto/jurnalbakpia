@@ -34,14 +34,17 @@ php artisan pail       # Tail logs
 ./vendor/bin/phpunit   # Run tests
 ```
 
+Repo convention: `.githooks/pre-commit` blocks direct commits on `main` — always work on a feature branch and merge via PR.
+
 ## Directory Map
 
 | Path | What lives here |
 |---|---|
 | `routes/api.php` | The e-commerce API surface consumed by FE-bakpia. Keep small and explicit. |
 | `routes/web.php` | Web routes (Filament mounts itself; rarely edited directly). |
-| `app/Http/Controllers/Api/` | `AuthController`, `BakpiaController`, `OrderController` — the only controllers the storefront talks to. |
+| `app/Http/Controllers/Api/` | `AuthController`, `BakpiaController`, `OrderController`, `KiriminajaWebhookController` — the storefront / webhook surface. |
 | `app/Http/Controllers/DownloadPdfController.php` | DomPDF-based PDF download endpoint (invoices, reports). |
+| `app/Services/` | Integration services: `KiriminajaService`, `FonnteService` + `WhatsAppTemplate`, `MassBakpiaShipmentService`, `OutletInitialStockService` (see "Services" below). |
 | `app/Models/` | Eloquent models. Note dual-domain naming: `Bakpia*` = internal ops; `Ol*` = online (e-commerce) entities. |
 | `app/Filament/Resources/` | One Resource per admin-managed entity. Adding a new admin screen = new Resource. |
 | `app/Filament/Widgets/` | Dashboard widgets (charts, KPIs) backed by `laravel-trend`. |
@@ -61,14 +64,17 @@ The schema reflects that this is both an internal ERP and an e-commerce backend.
 | `BakpiaProduction` | `bakpia_productions` | `production_status` (`SUCCESS`/`FAIL`), `amount`, `production_date` | `belongsTo` bakpia |
 | `BakpiaStock` | `bakpia_stocks` | `box_varian` (nullable, legacy audit only), `status` (`STOCK_IN`/`STOCK_SOLD`/`RETURNED`), `amount`, `stock_record_date`, `id_transaction` | `belongsTo` bakpia, outlet |
 | `BakpiaShipment` | `bakpia_shipments` | `status` (`SENT`/`RETURNED`), `box_varian` (nullable, legacy audit only), `amount`, `shipment_date` | `belongsTo` bakpia, outlet |
-| `BakpiaTransaction` | `bakpia_transactions` / `id_transaction` (string) | `transaction_detail` (JSON line items, price-snapshotted), `total_price`, `discount`, `status` (`PAID`/`REFUND`) | `belongsTo` customer, payment, outlet |
-| `Outlet` | `outlets` / `id_outlet` (string) | `type` (`OFFICIAL`/`CABIN`/`DENTES`), `name`, `phone_number`, `address` | `hasMany` bakpiaTransaction, shipment, stock, otherProductTransaction |
-| `Customer` | `customers` | offline/wholesale buyers | `hasMany` bakpiaTransaction, otherProductTransaction |
-| `Payment` | `payments` | `name`, `type` (`CASH`/`BANK`) — payment **method**, not a per-order record | `hasMany` bakpiaTransaction, otherProductTransaction |
-| `OtherProduct` | non-bakpia merchandise master | | |
-| `OtherProductTransaction` | `other_product_transactions` / `id_transaction` | same POS shape as `BakpiaTransaction` | `belongsTo` customer, payment, outlet |
+| `Transaction` (unified POS) | `transactions` / `id_transaction` (string) | `product_type` per line (`BAKPIA`/`ISEYA`/`OTHER`), `transaction_details` (JSON line items, price-snapshotted, optional per-line `discount_per`), `total_price`, `discount` (header), `total_discount`, `total_price_after_discount`, `status` (`PAID`/`REFUND`) | `belongsTo` customer, payment, outlet; `totalDiscount()`/`grandTotal()` prefer stored columns and fall back to the JSON for pre-discount rows; `createStockSoldRecords()` writes `STOCK_SOLD` movements for `BAKPIA` lines |
+| `Iseya` | `iseyas` | second product master (non-bakpia merchandise sold as `ISEYA` POS lines) | own `IseyaResource` + `IseyaPolicy` (filament-shield) |
+| `Outlet` | `outlets` / `id_outlet` (string) | `type` (`OFFICIAL`/`CABIN`/`DENTES`), `name`, `phone_number`, `address` | `hasMany` transaction, shipment, stock (+ legacy bakpiaTransaction / otherProductTransaction) |
+| `Customer` | `customers` | offline/wholesale buyers | `hasMany` transaction (+ legacy bakpiaTransaction / otherProductTransaction) |
+| `Payment` | `payments` | `name`, `type` (`CASH`/`BANK`) — payment **method**, not a per-order record | `hasMany` transaction (+ legacy bakpiaTransaction / otherProductTransaction) |
+| `OtherProduct` | non-bakpia merchandise master (`OTHER` POS lines) | | |
+| `BakpiaTransaction` / `OtherProductTransaction` | `bakpia_transactions` / `other_product_transactions` / `id_transaction` | **legacy** — pre-unification POS tables, kept for historical records (their Resources remain in the sidebar) | `belongsTo` customer, payment, outlet |
 
 **Stock is movement-based:** on-hand = sum of `STOCK_IN` − `STOCK_SOLD` − `RETURNED` per `(outlet, bakpia)`. `BakpiaStock::onHand()` is the canonical implementation. There is no single "current quantity" column. Rows written before the box-size variant was dropped still carry a `box_varian` value; that column is now an audit trail and its rows are pooled into the same on-hand total.
+
+**Unified POS flow:** the current point-of-sale entry point is `TransactionResource` → `Transaction` — one form for all three product types (`BAKPIA` → `Bakpia` master, `ISEYA` → `Iseya` master, `OTHER` → `OtherProduct` master), with per-line and header discounts. The older `BakpiaTransaction` / `OtherProductTransaction` flows are legacy: read historical records there, don't write new sales to them.
 
 **Pricing is snapshotted:** `Transaction.transaction_details` (JSON) freezes `product_name` / `price_unit` / `price_per` per line, and `total_price` is stored. The price is computed server-side from `Bakpia.price` at creation, so it's both snapshotted and authoritative. Editing a `Bakpia` price later does not alter past transactions.
 
@@ -80,10 +86,11 @@ The schema reflects that this is both an internal ERP and an e-commerce backend.
 |---|---|---|
 | `OlProduct` | `ol_products` | products exposed via the public API; `hasMany` `OlEcommerceTransactionDetail` |
 | `OlCustomer` | `ol_customers` | storefront customers (Google OAuth users) |
-| `OlEcommerceTransaction` / `OlEcommerceTransactionDetail` | `ol_ecommerce_transactions*` | online orders; UUID PKs. Detail freezes `product_name_snapshot` + `price_per_item`. ⚠️ Unlike `BakpiaTransaction`, the snapshot price is taken from the **frontend request payload** (`OrderController::getTokenMidtransv1`), not recomputed from `OlProduct` — client-supplied and currently trusted. |
+| `OlEcommerceTransaction` / `OlEcommerceTransactionDetail` | `ol_ecommerce_transactions*` | online orders; UUID PKs. Detail freezes `product_name_snapshot` + `price_per_item`. ⚠️ Unlike the internal POS, the snapshot price is taken from the **frontend request payload** (`OrderController::getTokenMidtransv1`), not recomputed from `OlProduct` — client-supplied and currently trusted. |
+| `OlShipmentEvent` | `ol_shipment_events` | shipment-status audit log written by `KiriminajaWebhookController` — UUID PK, `invoice_number`, `event_type`, `awb`, `event_at`/`shipped_at`/`finished_at`/`returned_at`, `reason`, `raw_payload` (JSON); `belongsTo` `OlEcommerceTransaction` via `invoice_number`. |
 
 ### Rules of thumb
-- `Bakpia*`, `Outlet`, `Customer`, `Payment`, `OtherProduct*` are **internal ops** — Filament only, never exposed via `routes/api.php`.
+- `Bakpia*`, `Transaction`, `Iseya`, `Outlet`, `Customer`, `Payment`, `OtherProduct*` are **internal ops** — Filament only, never exposed via `routes/api.php`.
 - `Ol*` are **online** — reachable through the public API.
 - The two product masters (`Bakpia` vs `OlProduct`) and two customer tables (`Customer` vs `OlCustomer`) are **separate and intentional** — do not merge or cross-reference them.
 - When adding a public API feature, prefer the `Ol*` family unless the data genuinely belongs to internal ops.
@@ -95,17 +102,27 @@ Current surface (keep it small):
 | Method | Path | Controller | Auth |
 |---|---|---|---|
 | GET | `/api/bakpias`, `/api/products` | `BakpiaController@index` | public |
+| GET | `/api/outlets` | `BakpiaController@outlets` | public (checkout pickup selector) |
+| GET | `/api/checkout/config` | `OrderController@checkoutConfig` | public (admin-fee percent/cap, display only — backend is authoritative) |
 | POST | `/api/register` | `AuthController@register` | public |
 | POST | `/api/login` | `AuthController@login` | public |
 | POST | `/api/auth/google/callback` | `AuthController@handleGoogleCallback` | public — issues Sanctum token |
+| POST | `/api/forgot-password`, `/api/reset-password` | `AuthController@forgotPassword` / `resetPassword` | public |
+| POST | `/api/verify-email` | `AuthController@verifyEmail` | public |
 | POST | `/api/midtranstokenv1` | `OrderController@getTokenMidtransv1` | public (TODO: move under `auth:sanctum`) |
 | POST | `/api/midtrans-callback/` | `OrderController@handleMidtransCallback` | public (Midtrans webhook) |
-| POST | `/api/kiriminaja-callback/` | `OrderController@kiriminajaCallback` | public (KiriminAja webhook) |
+| POST | `/api/kiriminaja-callback/` | `KiriminajaWebhookController@handle` | public (KiriminAja webhook) |
 | GET | `/api/transaction/{invoice_number}` | `OrderController@getTransactionDetailByInvoice` | public |
+| GET | `/api/transaction/{invoice_number}/label` | `OrderController@getShippingLabel` | public — shipping-label PDF (paid delivery orders) |
 | GET | `/api/tracking/{invoice_number}` | `OrderController@getShippingTracking` | public — proxies to KiriminAja |
+| POST | `/api/shipping/pricing` | `OrderController@getShippingPrice` | public — shipping quote (origin + box dims from `config/kiriminaja.php`) |
 | GET | `/api/profile` | `AuthController@me` | `auth:sanctum` |
 | PUT | `/api/profile` | `AuthController@updateProfile` | `auth:sanctum` |
+| PUT | `/api/profile/phone` | `AuthController@updatePhone` | `auth:sanctum` |
 | PUT | `/api/profile/password` | `AuthController@updatePassword` | `auth:sanctum` |
+| POST | `/api/email/resend-verification` | `AuthController@resendVerification` | `auth:sanctum` |
+| GET | `/api/profile/linked-accounts` | `AuthController@getLinkedAccounts` | `auth:sanctum` |
+| DELETE | `/api/profile/linked-accounts/{provider}` | `AuthController@unlinkProvider` | `auth:sanctum` |
 | POST | `/api/logout` | `AuthController@logout` | `auth:sanctum` |
 | GET | `/api/orderlists` | `OrderController@orderlists` | `auth:sanctum` |
 
@@ -118,9 +135,21 @@ Conventions when adding a route:
 
 - Mounted by the Filament service provider; admin lives at `/admin` by default.
 - Each `app/Filament/Resources/<Name>Resource.php` defines columns, forms, filters, and an associated `Pages/` folder for List/Create/Edit pages.
-- Permissions are managed via **filament-shield** — after creating a new Resource, run `php artisan shield:generate` to scaffold permissions and assign them to roles.
-- Excel exports come from `pxlrbt/filament-excel`. Prefer it over hand-rolled exports.
-- Widgets in `app/Filament/Widgets/` use `flowframe/laravel-trend` for time-series charts.
+- Custom admin pages live in `app/Filament/Pages/`: `MassBakpiaShipment` (bulk shipments to outlets, backed by `MassBakpiaShipmentService`), `PendapatanStockDashboard`, `RevenueChartDashboard`.
+- Widgets in `app/Filament/Widgets/`: `DailyRevenueChart`, `OutletRevenueChart`, `OutletPendapatanStockOverview` (per-outlet stock), `RevenuePeriodTable` (revenue summary), `TransactionNoticeWidget` — time-series ones use `flowframe/laravel-trend`.
+- Permissions are managed via **filament-shield** — after creating a new Resource, run `php artisan shield:generate` to scaffold permissions and assign them to roles (`IseyaResource` → `IseyaPolicy` is an example).
+- Excel exports come from `pxlrbt/filament-excel` — including the per-line-item transaction detail export. Prefer it over hand-rolled exports.
+
+## Services (`app/Services/`) & Config
+
+| Service | Role |
+|---|---|
+| `KiriminajaService` | Wraps all outbound KiriminAja API calls (pickup requests, tracking). |
+| `FonnteService` + `WhatsAppTemplate` | WhatsApp notifications via Fonnte (`config/fonnte.php`: `token`, `base_url`, `enabled`). Sent on Midtrans payment success and on KiriminAja `shipped`/`delivered` events. Always wrapped in try/catch — a Fonnte failure is logged, never breaks the webhook. |
+| `MassBakpiaShipmentService` | Backs the `MassBakpiaShipment` admin page (bulk shipments to outlets). |
+| `OutletInitialStockService` | Auto-populates initial stock shipments when an `Outlet` is created. |
+
+Domain config: `config/kiriminaja.php` (origin kecamatan/kelurahan + box dimensions — single source of truth for `POST /api/shipping/pricing` quotes), `config/bakpia.php` (`admin_fee_percent`, `admin_fee_max` — the backend-authoritative checkout fee), `config/order.php`.
 
 ## Authentication Details
 
@@ -136,7 +165,7 @@ Conventions when adding a route:
 
 - Config keys live in `.env`: `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_IS_PRODUCTION`, `MIDTRANS_IS_SANITIZED`, `MIDTRANS_IS_3DS`.
 - `OrderController::getTokenMidtransv1` builds the Snap request and returns `{ snap_token, ... }` to the frontend.
-- `OrderController::handleMidtransCallback` is the webhook — always verify the signature (`Midtrans\Notification`) before mutating order state. On success, updates the matching `OlEcommerceTransaction`, sends the invoice email (`TransaksiMail`), and triggers a KiriminAja pickup request.
+- `OrderController::handleMidtransCallback` is the webhook — always verify the signature (`Midtrans\Notification`) before mutating order state. On success, updates the matching `OlEcommerceTransaction`, sends the invoice email (`TransaksiMail`), sends a Fonnte WhatsApp payment-success message, and triggers a KiriminAja pickup request.
 
 ## Email Service
 
@@ -150,9 +179,10 @@ Conventions when adding a route:
 
 - **Service class:** `app/Services/KiriminajaService.php` — wraps all outbound KiriminAja API calls.
 - **Request pickup:** Triggered automatically inside `handleMidtransCallback` when payment is confirmed. Sends shipment request to KiriminAja.
-- **Callback webhook:** `POST /api/kiriminaja-callback/` (`OrderController@kiriminajaCallback`) — receives status updates from KiriminAja (e.g. picked up, in transit, delivered).
+- **Callback webhook:** `POST /api/kiriminaja-callback/` (`KiriminajaWebhookController@handle`) — receives status updates from KiriminAja (processed/shipped/canceled/finished/returned), writes an `OlShipmentEvent` audit row per event, and sends the customer a Fonnte WhatsApp message on `shipped`/`delivered`.
 - **Tracking:** `GET /api/tracking/{invoice_number}` (`OrderController@getShippingTracking`) — proxies the tracking query to KiriminAja and returns timeline data to the frontend.
-- The API key is server-side only (never exposed to the browser). Frontend calls `/api/kiriminaja/...` through the Next.js proxy for rate/price queries; tracking calls go through this Laravel endpoint.
+- **Price quotes:** `POST /api/shipping/pricing` (`OrderController@getShippingPrice`) — computes shipping quotes server-side; the warehouse origin and box dimensions come from `config/kiriminaja.php`.
+- The API key is server-side only (never exposed to the browser). Frontend coverage-area lookups go through the Next.js proxy (`/api/kiriminaja/...`); pricing and tracking calls go through these Laravel endpoints.
 
 ## Migrations
 
