@@ -22,6 +22,7 @@ class OlProduct extends Model
         'image',
         'rating',
         'price',
+        'discount_percent',
         'description',
         'category',
         'status',
@@ -36,6 +37,7 @@ class OlProduct extends Model
         'image' => 'array',
         'is_featured' => 'boolean',
         'sort_order' => 'integer',
+        'discount_percent' => 'integer',
     ];
 
     public function olecommercetransactiondetail(): HasMany

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\OlProduct;
 use App\Models\Outlet;
+use App\Services\OlPricingService;
 use Illuminate\Http\JsonResponse;
 
 class BakpiaController extends Controller
@@ -21,14 +22,26 @@ class BakpiaController extends Controller
             ->orderByDesc('created_at')
             ->paginate(12);
 
-        // Map the data to ensure full image URLs are returned
-        $products->getCollection()->transform(function ($product) {
+        $effective = (new OlPricingService)->effectivePrices($products->getCollection());
+
+        // `price` returns the effective (discounted) price so the store
+        // renders correctly regardless of client math; discount metadata
+        // lets the FE strike through the original price when present.
+        $products->getCollection()->transform(function ($product) use ($effective) {
+            $price = $effective->get($product->id);
+            $discounted = $price->source !== 'none';
+
             return [
                 'id' => $product->id,
                 'name' => $product->name,
                 'image' => $product->image,
                 'description' => $product->description,
-                'price' => $product->price,
+                'price' => $price->finalPrice,
+                'original_price' => $discounted ? $price->originalPrice : null,
+                'discount_type' => $discounted ? $price->discountType->value : null,
+                'discount_label' => $discounted ? $price->discountLabel() : null,
+                'discount_source' => $discounted ? $price->source : null,
+                'flash_sale_ends_at' => $price->flashSaleEndsAt?->toISOString(),
                 'created_at' => $product->created_at,
                 'updated_at' => $product->updated_at,
                 'category' => $product->category,

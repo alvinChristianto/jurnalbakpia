@@ -29,7 +29,7 @@ class OlProductResource extends Resource
 
     protected static ?string $navigationLabel = 'Produk Online';
 
-    protected static ?string $navigationGroup = 'Master website ';
+    protected static ?string $navigationGroup = 'Master website';
 
     protected static ?string $modelLabel = 'Produk Online';
 
@@ -71,6 +71,16 @@ class OlProductResource extends Resource
                             ->numeric()
                             ->prefix('IDR')
                             ->required(),
+
+                        TextInput::make('discount_percent')
+                            ->label('Diskon Normal (%)')
+                            ->numeric()
+                            ->integer()
+                            ->default(0)
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->required()
+                            ->helperText('Persen diskon normal 0–100 yang berlaku tanpa flash sale. 100% berarti produk gratis.'),
 
                         TextInput::make('rating')
                             ->numeric()
@@ -152,6 +162,12 @@ class OlProductResource extends Resource
                 TextColumn::make('price')
                     ->money('IDR')
                     ->sortable(),
+
+                TextColumn::make('discount_percent')
+                    ->label('Diskon')
+                    ->formatStateUsing(fn ($state): string => ((int) $state) > 0 ? $state.'%' : '—')
+                    ->badge()
+                    ->color(fn ($state): string => ((int) $state) > 0 ? 'success' : 'gray'),
 
                 TextColumn::make('rating')
                     ->numeric(decimalPlaces: 1)
