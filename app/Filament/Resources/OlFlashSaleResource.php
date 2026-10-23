@@ -80,7 +80,7 @@ class OlFlashSaleResource extends Resource
                             ->helperText('Gunakan aksi Publish / Cancel pada daftar atau halaman edit untuk mengubah status.'),
 
                         FileUpload::make('banner_path')
-                            ->label('Banner')
+                            ->label('Banner Persegi (1:1)')
                             ->image()
                             ->directory('olflashsales')
                             ->disk('public')
@@ -88,13 +88,32 @@ class OlFlashSaleResource extends Resource
                             ->openable()
                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                             ->maxSize(2048)
-                            ->nullable(),
+                            ->nullable()
+                            ->helperText('Persegi (1:1) — tampil di modal pembuka storefront.'),
 
                         TextInput::make('banner_alt')
                             ->label('Banner Alt Text')
                             ->maxLength(255)
                             ->helperText('Wajib bila banner diunggah.')
                             ->required(fn (callable $get): bool => filled($get('banner_path'))),
+
+                        FileUpload::make('banner_rect_path')
+                            ->label('Banner Lebar (3:1)')
+                            ->image()
+                            ->directory('olflashsales')
+                            ->disk('public')
+                            ->visibility('public')
+                            ->openable()
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                            ->maxSize(2048)
+                            ->nullable()
+                            ->helperText('Lebar (±3:1) — tampil sebagai banner besar di halaman utama. Jika kosong, banner persegi dipotong otomatis.'),
+
+                        TextInput::make('banner_rect_alt')
+                            ->label('Banner Lebar Alt Text')
+                            ->maxLength(255)
+                            ->helperText('Wajib bila banner lebar diunggah.')
+                            ->required(fn (callable $get): bool => filled($get('banner_rect_path'))),
                     ]),
             ]);
     }

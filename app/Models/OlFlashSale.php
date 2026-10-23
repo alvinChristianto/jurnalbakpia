@@ -23,7 +23,9 @@ class OlFlashSale extends Model
     protected $fillable = [
         'name',
         'banner_path',
+        'banner_rect_path',
         'banner_alt',
+        'banner_rect_alt',
         'start_at',
         'duration_minutes',
         'end_at',
@@ -59,6 +61,13 @@ class OlFlashSale extends Model
     {
         return $this->banner_path
             ? Storage::disk('public')->url($this->banner_path)
+            : null;
+    }
+
+    public function getBannerRectUrlAttribute(): ?string
+    {
+        return $this->banner_rect_path
+            ? Storage::disk('public')->url($this->banner_rect_path)
             : null;
     }
 
