@@ -21,7 +21,7 @@ class OlEcommerceTransactionDetailResource extends Resource
 
     protected static ?string $navigationLabel = 'Detail Transaksi Online';
 
-    protected static ?string $navigationGroup = 'Master website ';
+    protected static ?string $navigationGroup = 'Master website';
 
     protected static ?string $modelLabel = 'Detail Transaksi Online';
 

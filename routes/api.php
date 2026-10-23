@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BakpiaController;
+use App\Http\Controllers\Api\FlashSaleController;
 use App\Http\Controllers\Api\KiriminajaWebhookController;
 use App\Http\Controllers\Api\OrderController;
 use Illuminate\Support\Facades\Route;
@@ -9,6 +10,10 @@ use Illuminate\Support\Facades\Route;
 // Public products list
 Route::get('/bakpias', [BakpiaController::class, 'index']);
 Route::get('/products', [BakpiaController::class, 'index']);
+
+// Public flash sale (active event + countdown, upcoming teasers)
+Route::get('/flash-sales/active', [FlashSaleController::class, 'active']);
+Route::get('/flash-sales/upcoming', [FlashSaleController::class, 'upcoming']);
 
 // Public outlets list (for checkout pickup selector)
 Route::get('/outlets', [BakpiaController::class, 'outlets']);

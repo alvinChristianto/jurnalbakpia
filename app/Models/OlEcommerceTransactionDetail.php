@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DiscountType;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,7 +26,23 @@ class OlEcommerceTransactionDetail extends Model
         'quantity',
         'price_per_item',
         'note',
+        'original_price',
+        'discount_type',
+        'discount_amount',
+        'flash_sale_item_id',
     ];
+
+    protected $casts = [
+        'discount_type' => DiscountType::class,
+        'quantity' => 'integer',
+        'discount_amount' => 'decimal:2',
+        'original_price' => 'decimal:2',
+    ];
+
+    public function flashSaleItem(): BelongsTo
+    {
+        return $this->belongsTo(OlFlashSaleItem::class, 'flash_sale_item_id');
+    }
 
     /**
      * Relationship back to the main transaction
