@@ -46,6 +46,9 @@ Route::get('/transaction/{invoice_number}', [OrderController::class, 'getTransac
 // get printable shipping label PDF (paid delivery orders only)
 Route::get('/transaction/{invoice_number}/label', [OrderController::class, 'getShippingLabel']);
 
+// get printable invoice PDF (all statuses — doubles as order summary)
+Route::get('/transaction/{invoice_number}/invoice', [OrderController::class, 'getInvoicePdf']);
+
 // get shipping tracking by invoice number (proxies to KiriminAja)
 Route::get('/tracking/{invoice_number}', [OrderController::class, 'getShippingTracking']);
 

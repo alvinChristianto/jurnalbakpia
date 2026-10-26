@@ -98,6 +98,16 @@ class OlEcommerceTransactionResource extends Resource
                     ->label('Total Pembayaran')
                     ->numeric()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('subtotal_before_discount')
+                    ->label('Subtotal Sebelum Diskon')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('total_discount')
+                    ->label('Total Diskon')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('shipping_cost')
                     ->label('Ongkos Kirim')
                     ->numeric()
@@ -255,6 +265,8 @@ class OlEcommerceTransactionResource extends Resource
                             ->withColumns([
                                 Column::make('invoice_number')->heading('Invoice ID'),
                                 Column::make('olcustomer.name')->heading('customer Name'),
+                                Column::make('subtotal_before_discount')->heading('Subtotal Before Discount'),
+                                Column::make('total_discount')->heading('Total Discount'),
                                 Column::make('shipping_cost')->heading('Shipping Cost'),
                                 Column::make('service_fee')->heading('Service Fee'),
                                 Column::make('grand_total')->heading('Grand Total'),

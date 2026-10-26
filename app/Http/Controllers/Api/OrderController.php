@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\DiscountType;
 use App\Enums\TransactionStatus;
 use App\Events\TransaksiBerhasil;
 use App\Exceptions\OlFlashSaleSoldOutException;
@@ -148,6 +149,14 @@ class OrderController extends Controller
         $subtotal = (int) collect($orderDetail)->sum(
             fn ($item) => $effective->get($item['id'])->finalPrice * (int) $item['quantity']
         );
+        // Header-level discount snapshot (plan-invoice-pdf-discount-columns);
+        // discountAmount is per item (original − final), so multiply by qty.
+        $subtotalBeforeDiscount = (int) collect($orderDetail)->sum(
+            fn ($item) => $effective->get($item['id'])->originalPrice * (int) $item['quantity']
+        );
+        $totalDiscount = (int) collect($orderDetail)->sum(
+            fn ($item) => (int) ($effective->get($item['id'])->discountAmount ?? 0) * (int) $item['quantity']
+        );
         $serviceFee = $this->calculateAdminFee($subtotal);
         $grandTotal = $subtotal + $shippingCost + $serviceFee;
 
@@ -162,11 +171,13 @@ class OrderController extends Controller
         $invoicePrefix = env('APP_ENV') === 'production' ? 'BAK-' : 'INV0-';
 
         try {
-            $OlTransaction = DB::transaction(function () use ($orderDetail, $effective, $flashReservations, $flashItems, $getIdCustomer, $invoicePrefix, $grandTotal, $shippingCost, $serviceFee, $shippingDetail, $isDelivery) {
+            $OlTransaction = DB::transaction(function () use ($orderDetail, $effective, $flashReservations, $flashItems, $getIdCustomer, $invoicePrefix, $grandTotal, $subtotalBeforeDiscount, $totalDiscount, $shippingCost, $serviceFee, $shippingDetail, $isDelivery) {
                 $OlTransaction = OlEcommerceTransaction::create([
                     'ol_customer_id' => $getIdCustomer,
                     'invoice_number' => $invoicePrefix.strtoupper(Str::random(8)),
                     'subtotal' => $grandTotal, // unchanged behaviour: this column mirrors the grand total, not the true subtotal (see plan-admin-fee-cap.md)
+                    'subtotal_before_discount' => $subtotalBeforeDiscount,
+                    'total_discount' => $totalDiscount,
                     'shipping_cost' => $shippingCost,
                     'service_fee' => $serviceFee,
                     'grand_total' => $grandTotal,
@@ -611,6 +622,106 @@ class OrderController extends Controller
         ])->setPaper([0, 0, 283.46, 425.20]); // 100×150mm label in PDF points
 
         return $pdf->stream('label-'.$transaction->invoice_number.'.pdf', ['Attachment' => false]);
+    }
+
+    /**
+     * Printable invoice PDF (plan-invoice-pdf-discount-columns).
+     * Public by design — the invoice number is the only secret, and the JSON
+     * detail endpoint it mirrors is already public. Available for all
+     * statuses: a PENDING invoice doubles as the order summary.
+     */
+    public function getInvoicePdf($invoice_number)
+    {
+        $transaction = OlEcommerceTransaction::with('olcustomer', 'details')
+            ->where('invoice_number', $invoice_number)
+            ->first();
+
+        if (! $transaction) {
+            abort(404, 'Transaction not found');
+        }
+
+        // Totals: prefer the persisted header snapshot; fall back defensively
+        // to the detail rows for rows written before the columns existed.
+        $subtotalBeforeDiscount = (float) ($transaction->subtotal_before_discount
+            ?? $transaction->details->sum(fn ($d) => $d->quantity * ($d->original_price ?? $d->price_per_item)));
+        $totalDiscount = (float) (
+            $transaction->total_discount
+            ?? $transaction->details->sum(fn ($d) => $d->quantity * $d->discount_amount)
+        );
+
+        $lines = $transaction->details->map(function ($d) {
+            $originalPrice = (float) ($d->original_price ?? $d->price_per_item);
+
+            $discountLabel = match ($d->discount_type) {
+                DiscountType::PERCENT => $d->original_price > 0
+                    ? '-'.((int) floor($d->discount_amount * 100 / $d->original_price)).'%'
+                    : '-',
+                DiscountType::FIXED => '-Rp '.number_format((float) $d->discount_amount, 0, ',', '.'),
+                default => null,
+            };
+
+            return [
+                'name' => $d->product_name_snapshot,
+                'note' => $d->note,
+                'qty' => (int) $d->quantity,
+                'unitPrice' => (float) $d->price_per_item,
+                'originalPrice' => $originalPrice,
+                'discounted' => $d->original_price !== null && (float) $d->original_price > (float) $d->price_per_item,
+                'discountLabel' => $discountLabel,
+                'lineDiscount' => (float) $d->quantity * (float) $d->discount_amount,
+                'lineTotal' => (float) $d->quantity * (float) $d->price_per_item,
+            ];
+        });
+
+        // Address block — same snapshot decoding as the shipping label.
+        $snapshot = $transaction->shipping_address_snapshot;
+        if (is_string($snapshot)) {
+            $snapshot = json_decode($snapshot, true);
+        }
+        $snapshot = $snapshot ?: [];
+        $isPickup = ($snapshot['type'] ?? '') === 'pickup' || $transaction->courier_name === 'pickup';
+
+        if ($isPickup) {
+            $addressTitle = 'Lokasi Ambil';
+            $addressLines = array_filter([
+                $snapshot['storeName'] ?? null,
+                $snapshot['storeAddress'] ?? null,
+                ! empty($snapshot['pickupDate'])
+                    ? 'Jadwal: '.$snapshot['pickupDate'].(isset($snapshot['pickupTime']) ? ' pukul '.$snapshot['pickupTime'] : '')
+                    : null,
+            ]);
+        } else {
+            $addressTitle = 'Alamat Pengiriman';
+            $addressLines = array_filter([
+                $transaction->olcustomer?->name,
+                $snapshot['fullAddress'] ?? implode(', ', array_filter([
+                    $snapshot['street_detail'] ?? null,
+                    $snapshot['kelurahan_name'] ?? null,
+                    $snapshot['kecamatan_name'] ?? null,
+                    $snapshot['city_name'] ?? null,
+                    $snapshot['province_name'] ?? null,
+                    $snapshot['postalCode'] ?? null,
+                ])),
+            ]);
+        }
+
+        $resi = $transaction->shipmentEvents()->latest('event_at')->value('awb') ?: $transaction->tracking_number;
+
+        $pdf = App::make('dompdf.wrapper');
+        $pdf->loadView('pdf.ecommerce_invoice', [
+            'transaction' => $transaction,
+            'lines' => $lines,
+            'subtotalBeforeDiscount' => $subtotalBeforeDiscount,
+            'totalDiscount' => $totalDiscount,
+            'customer' => $transaction->olcustomer,
+            'addressTitle' => $addressTitle,
+            'addressLines' => array_values($addressLines),
+            'resi' => $resi,
+            'storeName' => config('kiriminaja.sender_name'),
+            'storePhone' => config('kiriminaja.sender_phone'),
+        ])->setPaper('a4');
+
+        return $pdf->download('invoice-'.$transaction->invoice_number.'.pdf');
     }
 
     public function getShippingPrice(Request $request)
