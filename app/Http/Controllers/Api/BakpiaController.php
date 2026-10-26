@@ -5,15 +5,41 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\OlProduct;
 use App\Models\Outlet;
+use App\Services\OlPricingService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class BakpiaController extends Controller
 {
     /**
      * Display a listing of all products.
+     *
+     * Supports an optional `?ids=` filter (comma-separated UUIDs, max 50) so
+     * the frontend can revalidate cart prices without re-fetching the catalog.
+     * Inactive/nonexistent ids are silently dropped.
      */
     public function index()
     {
+        $ids = $this->parseIdsFilter();
+
+        if ($ids !== null) {
+            $products = OlProduct::where('status', 'ACTIVE')
+                ->whereIn('id', $ids)
+                ->orderBy('sort_order')
+                ->orderByDesc('created_at')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Products retrieved successfully',
+                'data' => [
+                    'total' => $products->count(),
+                    'data' => $this->applyPricing($products),
+                ],
+            ], 200);
+        }
+
         // Fetch products that are active/available
         // We use paginate so your Next.js frontend doesn't lag if you have 100+ types of Bakpia
         $products = OlProduct::where('status', 'ACTIVE')
@@ -21,14 +47,72 @@ class BakpiaController extends Controller
             ->orderByDesc('created_at')
             ->paginate(12);
 
-        // Map the data to ensure full image URLs are returned
-        $products->getCollection()->transform(function ($product) {
+        $items = $this->applyPricing($products->getCollection());
+
+        // Paginate() already serialized the transformed collection, but the
+        // paginator clones the underlying collection — assign explicitly.
+        $products->setCollection($items);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Products retrieved successfully',
+            'data' => $products,
+        ], 200);
+    }
+
+    /**
+     * Parse the optional `?ids=` query filter. Returns null when absent
+     * (regular paginated listing), or an array of ids after validation.
+     */
+    private function parseIdsFilter(): ?array
+    {
+        $raw = request()->query('ids');
+
+        if ($raw === null || trim((string) $raw) === '') {
+            return null;
+        }
+
+        $ids = array_values(array_filter(array_map('trim', explode(',', (string) $raw))));
+
+        if (empty($ids)) {
+            return null;
+        }
+
+        if (count($ids) > 50) {
+            throw ValidationException::withMessages([
+                'ids' => ['The ids filter accepts at most 50 ids.'],
+            ]);
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Attach effective pricing to a collection of OlProduct models.
+     *
+     * `price` returns the effective (discounted) price so the store renders
+     * correctly regardless of client math; discount metadata lets the FE
+     * strike through the original price when present.
+     */
+    private function applyPricing(Collection $products): Collection
+    {
+        $effective = (new OlPricingService)->effectivePrices($products);
+
+        return $products->map(function ($product) use ($effective) {
+            $price = $effective->get($product->id);
+            $discounted = $price->source !== 'none';
+
             return [
                 'id' => $product->id,
                 'name' => $product->name,
                 'image' => $product->image,
                 'description' => $product->description,
-                'price' => $product->price,
+                'price' => $price->finalPrice,
+                'original_price' => $discounted ? $price->originalPrice : null,
+                'discount_type' => $discounted ? $price->discountType->value : null,
+                'discount_label' => $discounted ? $price->discountLabel() : null,
+                'discount_source' => $discounted ? $price->source : null,
+                'flash_sale_ends_at' => $price->flashSaleEndsAt?->toISOString(),
                 'created_at' => $product->created_at,
                 'updated_at' => $product->updated_at,
                 'category' => $product->category,
@@ -39,12 +123,6 @@ class BakpiaController extends Controller
                 'status' => $product->status,
             ];
         });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Products retrieved successfully',
-            'data' => $products,
-        ], 200);
     }
 
     public function outlets(): JsonResponse

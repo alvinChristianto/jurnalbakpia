@@ -2,15 +2,21 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\DiscountType;
+use App\Enums\TransactionStatus;
 use App\Events\TransaksiBerhasil;
+use App\Exceptions\OlFlashSaleSoldOutException;
 use App\Http\Controllers\Controller;
 use App\Mail\TransaksiMail;
 use App\Models\OlCustomer;
 use App\Models\OlEcommerceTransaction;
 use App\Models\OlEcommerceTransactionDetail;
+use App\Models\OlFlashSaleItem;
 use App\Models\OlProduct;
 use App\Services\FonnteService;
 use App\Services\KiriminajaService;
+use App\Services\OlFlashSaleQuotaService;
+use App\Services\OlPricingService;
 use App\Services\WhatsAppTemplate;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -120,8 +126,36 @@ class OrderController extends Controller
             }
         }
 
+        // Server-authoritative pricing from a single source of truth:
+        // active flash sale wins, else the product's normal discount (no stacking).
+        $pricing = new OlPricingService;
+        $effective = $pricing->effectivePrices($products);
+
+        $flashReservations = collect($orderDetail)
+            ->filter(fn ($item) => $effective->get($item['id'])->source === 'flash_sale')
+            ->map(fn ($item) => [
+                'id' => $effective->get($item['id'])->flashSaleItemId,
+                'qty' => (int) $item['quantity'],
+            ])
+            ->groupBy('id')
+            ->map(fn ($group, $id) => ['id' => $id, 'qty' => (int) $group->sum('qty')]);
+
+        $flashItems = $flashReservations->isEmpty()
+            ? collect()
+            : OlFlashSaleItem::whereIn('id', $flashReservations->pluck('id'))->get()->keyBy('id');
+
+        $hasFlashLines = $flashReservations->isNotEmpty();
+
         $subtotal = (int) collect($orderDetail)->sum(
-            fn ($item) => $products->get($item['id'])->price * $item['quantity']
+            fn ($item) => $effective->get($item['id'])->finalPrice * (int) $item['quantity']
+        );
+        // Header-level discount snapshot (plan-invoice-pdf-discount-columns);
+        // discountAmount is per item (original − final), so multiply by qty.
+        $subtotalBeforeDiscount = (int) collect($orderDetail)->sum(
+            fn ($item) => $effective->get($item['id'])->originalPrice * (int) $item['quantity']
+        );
+        $totalDiscount = (int) collect($orderDetail)->sum(
+            fn ($item) => (int) ($effective->get($item['id'])->discountAmount ?? 0) * (int) $item['quantity']
         );
         $serviceFee = $this->calculateAdminFee($subtotal);
         $grandTotal = $subtotal + $shippingCost + $serviceFee;
@@ -136,38 +170,66 @@ class OrderController extends Controller
         // Generate invoice number prefix based on environment
         $invoicePrefix = env('APP_ENV') === 'production' ? 'BAK-' : 'INV0-';
 
-        $OlTransaction = OlEcommerceTransaction::create([
-            'ol_customer_id' => $getIdCustomer,
-            'invoice_number' => $invoicePrefix.strtoupper(Str::random(8)),
-            'subtotal' => $grandTotal, // unchanged behaviour: this column mirrors the grand total, not the true subtotal (see plan-admin-fee-cap.md)
-            'shipping_cost' => $shippingCost,
-            'service_fee' => $serviceFee,
-            'grand_total' => $grandTotal,
-            'shipping_address_snapshot' => $shippingDetail,
-            'status' => 'pending',
-            'courier_name' => $isDelivery
-                ? ($shippingDetail['courier']['service'] ?? null)
-                : 'pickup',
-            'courier_service' => $isDelivery
-                ? ($shippingDetail['courier']['service_name'] ?? null)
-                : null,
-            'requested_shipping_datetime' => ! $isDelivery && isset($shippingDetail['pickupDate'])
-                ? Carbon::parse($shippingDetail['pickupDate'].' '.($shippingDetail['pickupTime'] ?? '00:00'))
-                : null,
-        ]);
+        try {
+            $OlTransaction = DB::transaction(function () use ($orderDetail, $effective, $flashReservations, $flashItems, $getIdCustomer, $invoicePrefix, $grandTotal, $subtotalBeforeDiscount, $totalDiscount, $shippingCost, $serviceFee, $shippingDetail, $isDelivery) {
+                $OlTransaction = OlEcommerceTransaction::create([
+                    'ol_customer_id' => $getIdCustomer,
+                    'invoice_number' => $invoicePrefix.strtoupper(Str::random(8)),
+                    'subtotal' => $grandTotal, // unchanged behaviour: this column mirrors the grand total, not the true subtotal (see plan-admin-fee-cap.md)
+                    'subtotal_before_discount' => $subtotalBeforeDiscount,
+                    'total_discount' => $totalDiscount,
+                    'shipping_cost' => $shippingCost,
+                    'service_fee' => $serviceFee,
+                    'grand_total' => $grandTotal,
+                    'shipping_address_snapshot' => $shippingDetail,
+                    'status' => TransactionStatus::PENDING,
+                    'courier_name' => $isDelivery
+                        ? ($shippingDetail['courier']['service'] ?? null)
+                        : 'pickup',
+                    'courier_service' => $isDelivery
+                        ? ($shippingDetail['courier']['service_name'] ?? null)
+                        : null,
+                    'requested_shipping_datetime' => ! $isDelivery && isset($shippingDetail['pickupDate'])
+                        ? Carbon::parse($shippingDetail['pickupDate'].' '.($shippingDetail['pickupTime'] ?? '00:00'))
+                        : null,
+                ]);
 
-        // not necessary for now
-        $OrderId = $OlTransaction->id;
+                foreach ($orderDetail as $item) {
+                    $price = $effective->get($item['id']);
+                    $discounted = $price->source !== 'none';
 
-        foreach ($orderDetail as $item) {
-            OlEcommerceTransactionDetail::create([
-                'transaction_id' => $OrderId,
-                'product_id' => $item['id'],
-                'product_name_snapshot' => $item['name'],
-                'quantity' => $item['quantity'],
-                'price_per_item' => $products->get($item['id'])->price,
-                'note' => $item['note'] ?? null,
-            ]);
+                    OlEcommerceTransactionDetail::create([
+                        'transaction_id' => $OlTransaction->id,
+                        'product_id' => $item['id'],
+                        'product_name_snapshot' => $item['name'],
+                        'quantity' => $item['quantity'],
+                        'price_per_item' => $price->finalPrice,
+                        'note' => $item['note'] ?? null,
+                        'original_price' => $discounted ? $price->originalPrice : null,
+                        'discount_type' => $discounted ? $price->discountType->value : null,
+                        'discount_amount' => $discounted ? $price->discountAmount : 0,
+                        'flash_sale_item_id' => $price->flashSaleItemId,
+                    ]);
+                }
+
+                $reservations = $flashReservations->map(
+                    fn ($r) => ['item' => $flashItems->get($r['id']), 'qty' => $r['qty']],
+                )->values();
+
+                if ($reservations->isNotEmpty()) {
+                    OlFlashSaleQuotaService::reserve($reservations);
+                }
+
+                return $OlTransaction;
+            });
+        } catch (OlFlashSaleSoldOutException $e) {
+            return response()->json([
+                'message' => 'Stok flash sale telah habis atau harga berubah. Silakan muat ulang halaman.',
+                'errors' => [
+                    'flash_sale' => ['Produk tidak lagi tersedia dalam flash sale.'],
+                    'product_id' => $e->productId,
+                ],
+            ], 422);
         }
 
         // 3. Generate the Unique Order ID for Midtrans
@@ -183,10 +245,10 @@ class OrderController extends Controller
             $customField1 = 'pickup|'.($shippingDetail['storeName'] ?? '').'|'.($shippingDetail['storeAddress'] ?? '');
         }
 
-        $itemDetails = collect($orderDetail)->map(function ($item) use ($products) {
+        $itemDetails = collect($orderDetail)->map(function ($item) use ($effective) {
             return [
                 'id' => $item['id'],
-                'price' => (int) $products->get($item['id'])->price,
+                'price' => (int) $effective->get($item['id'])->finalPrice,
                 'quantity' => (int) $item['quantity'],
                 'name' => Str::limit($item['name'], 50),
             ];
@@ -249,6 +311,16 @@ class OrderController extends Controller
 
         ];
 
+        // Cap the reservation window so quota is not held hostage by unpaid
+        // flash-sale orders (the sweep command is the backstop).
+        if ($hasFlashLines) {
+            $params['expiry'] = [
+                'start' => now()->format('Y-m-d H:i:s O'),
+                'unit' => 'minute',
+                'duration' => (int) config('order.flashsale_reservation_ttl', 15),
+            ];
+        }
+
         // TAMBAH DISINI, DI CUSTOMER DETAIL DITAMBAH shipping_address json lalu di fronted kirim id provice dll, llu get price seperti biasa, dan cocockkan . jika tidak cocok maka tidak valid, lalu update ke database
         Log::info('API|getTokenMidtransv1|transactionToken-data-V1|parameter1|'.json_encode($params));
 
@@ -280,6 +352,15 @@ class OrderController extends Controller
 
             ], 200);
         } catch (\Exception $e) {
+            // Snap failed: the order can never be paid, so do not let flash-sale
+            // quota leak on a stalled pending row.
+            try {
+                OlFlashSaleQuotaService::releaseForTransaction($OlTransaction);
+                $OlTransaction->update(['status' => TransactionStatus::FAILED]);
+            } catch (\Throwable $releaseError) {
+                Log::error('getTokenMidtransv1: failed to release flash-sale quota after Snap error: '.$releaseError->getMessage());
+            }
+
             return response()->json([
                 'message' => 'Midtrans Error: '.$e->getMessage(),
             ], 500);
@@ -302,12 +383,24 @@ class OrderController extends Controller
             if ($txStatus == 'capture' || $txStatus == 'settlement') {
                 // Update transaction status in DB to "paid"
                 $transaction = OlEcommerceTransaction::where('invoice_number', $originalOrderId)->first();
-                if ($transaction) {
-                    $transaction->update([
-                        'status' => 'paid',
-                        'paid_at' => now(),
-                    ]);
+                if (! $transaction) {
+                    Log::error("Midtrans Callback: Transaction with invoice {$originalOrderId} not found for status {$txStatus}");
+
+                    return response()->json(['message' => 'Transaction not found'], 404);
                 }
+
+                // Webhook idempotency: only mutate a still-pending order so
+                // duplicated pushes never re-book KiriminAja or re-send mails.
+                if ($transaction->status !== TransactionStatus::PENDING) {
+                    Log::info("Midtrans Callback: Transaction {$originalOrderId} already {$transaction->status->value}, ignoring duplicate {$txStatus}");
+
+                    return response()->json(['message' => 'Already processed'], 200);
+                }
+
+                $transaction->update([
+                    'status' => TransactionStatus::PAID,
+                    'paid_at' => now(),
+                ]);
 
                 // Guard against double-encoded legacy records (stored as json_encode'd string)
                 $shippingSnapshot = $transaction->shipping_address_snapshot;
@@ -366,14 +459,28 @@ class OrderController extends Controller
                     Log::error("Midtrans Callback: Fonnte WA failed for {$transaksi->invoice_number}: {$e->getMessage()}");
                 }
             } elseif ($txStatus == 'deny' || $txStatus == 'cancel' || $txStatus == 'expire' || $txStatus == 'failure') {
-                // Update transaction status in DB to "failed"
+                // Mark the order failed and release any reserved flash-sale quota.
                 $transaction = OlEcommerceTransaction::where('invoice_number', $originalOrderId)->first();
-                if ($transaction) {
-                    $transaction->update([
-                        'status' => 'failed',
-                    ]);
+                if (! $transaction) {
+                    Log::error("Midtrans Callback: Transaction with invoice {$originalOrderId} not found for status {$txStatus}");
+
+                    return response()->json(['message' => 'Transaction not found'], 404);
                 }
 
+                // Webhook idempotency: only a pending order can transition to
+                // failed. The claim uses a conditional UPDATE so a concurrent
+                // expire webhook or the sweep cannot double-release quota
+                // (quota reservation is tied to the pending lifetime).
+                DB::transaction(function () use ($transaction): void {
+                    $claimed = OlEcommerceTransaction::query()
+                        ->where('id', $transaction->id)
+                        ->where('status', TransactionStatus::PENDING->value)
+                        ->update(['status' => TransactionStatus::FAILED->value]);
+
+                    if ($claimed) {
+                        OlFlashSaleQuotaService::releaseForTransaction($transaction);
+                    }
+                });
                 // You can handle pending status if needed
             } else {
                 // Handle other statuses like "deny", "expire", "cancel" if needed
@@ -515,6 +622,106 @@ class OrderController extends Controller
         ])->setPaper([0, 0, 283.46, 425.20]); // 100×150mm label in PDF points
 
         return $pdf->stream('label-'.$transaction->invoice_number.'.pdf', ['Attachment' => false]);
+    }
+
+    /**
+     * Printable invoice PDF (plan-invoice-pdf-discount-columns).
+     * Public by design — the invoice number is the only secret, and the JSON
+     * detail endpoint it mirrors is already public. Available for all
+     * statuses: a PENDING invoice doubles as the order summary.
+     */
+    public function getInvoicePdf($invoice_number)
+    {
+        $transaction = OlEcommerceTransaction::with('olcustomer', 'details')
+            ->where('invoice_number', $invoice_number)
+            ->first();
+
+        if (! $transaction) {
+            abort(404, 'Transaction not found');
+        }
+
+        // Totals: prefer the persisted header snapshot; fall back defensively
+        // to the detail rows for rows written before the columns existed.
+        $subtotalBeforeDiscount = (float) ($transaction->subtotal_before_discount
+            ?? $transaction->details->sum(fn ($d) => $d->quantity * ($d->original_price ?? $d->price_per_item)));
+        $totalDiscount = (float) (
+            $transaction->total_discount
+            ?? $transaction->details->sum(fn ($d) => $d->quantity * $d->discount_amount)
+        );
+
+        $lines = $transaction->details->map(function ($d) {
+            $originalPrice = (float) ($d->original_price ?? $d->price_per_item);
+
+            $discountLabel = match ($d->discount_type) {
+                DiscountType::PERCENT => $d->original_price > 0
+                    ? '-'.((int) floor($d->discount_amount * 100 / $d->original_price)).'%'
+                    : '-',
+                DiscountType::FIXED => '-Rp '.number_format((float) $d->discount_amount, 0, ',', '.'),
+                default => null,
+            };
+
+            return [
+                'name' => $d->product_name_snapshot,
+                'note' => $d->note,
+                'qty' => (int) $d->quantity,
+                'unitPrice' => (float) $d->price_per_item,
+                'originalPrice' => $originalPrice,
+                'discounted' => $d->original_price !== null && (float) $d->original_price > (float) $d->price_per_item,
+                'discountLabel' => $discountLabel,
+                'lineDiscount' => (float) $d->quantity * (float) $d->discount_amount,
+                'lineTotal' => (float) $d->quantity * (float) $d->price_per_item,
+            ];
+        });
+
+        // Address block — same snapshot decoding as the shipping label.
+        $snapshot = $transaction->shipping_address_snapshot;
+        if (is_string($snapshot)) {
+            $snapshot = json_decode($snapshot, true);
+        }
+        $snapshot = $snapshot ?: [];
+        $isPickup = ($snapshot['type'] ?? '') === 'pickup' || $transaction->courier_name === 'pickup';
+
+        if ($isPickup) {
+            $addressTitle = 'Lokasi Ambil';
+            $addressLines = array_filter([
+                $snapshot['storeName'] ?? null,
+                $snapshot['storeAddress'] ?? null,
+                ! empty($snapshot['pickupDate'])
+                    ? 'Jadwal: '.$snapshot['pickupDate'].(isset($snapshot['pickupTime']) ? ' pukul '.$snapshot['pickupTime'] : '')
+                    : null,
+            ]);
+        } else {
+            $addressTitle = 'Alamat Pengiriman';
+            $addressLines = array_filter([
+                $transaction->olcustomer?->name,
+                $snapshot['fullAddress'] ?? implode(', ', array_filter([
+                    $snapshot['street_detail'] ?? null,
+                    $snapshot['kelurahan_name'] ?? null,
+                    $snapshot['kecamatan_name'] ?? null,
+                    $snapshot['city_name'] ?? null,
+                    $snapshot['province_name'] ?? null,
+                    $snapshot['postalCode'] ?? null,
+                ])),
+            ]);
+        }
+
+        $resi = $transaction->shipmentEvents()->latest('event_at')->value('awb') ?: $transaction->tracking_number;
+
+        $pdf = App::make('dompdf.wrapper');
+        $pdf->loadView('pdf.ecommerce_invoice', [
+            'transaction' => $transaction,
+            'lines' => $lines,
+            'subtotalBeforeDiscount' => $subtotalBeforeDiscount,
+            'totalDiscount' => $totalDiscount,
+            'customer' => $transaction->olcustomer,
+            'addressTitle' => $addressTitle,
+            'addressLines' => array_values($addressLines),
+            'resi' => $resi,
+            'storeName' => config('kiriminaja.sender_name'),
+            'storePhone' => config('kiriminaja.sender_phone'),
+        ])->setPaper('a4');
+
+        return $pdf->download('invoice-'.$transaction->invoice_number.'.pdf');
     }
 
     public function getShippingPrice(Request $request)

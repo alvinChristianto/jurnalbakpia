@@ -11,6 +11,7 @@ enum TransactionStatus: string
     case COMPLETED = 'completed';
     case CANCELLED = 'cancelled';
     case RETURNED = 'returned';
+    case FAILED = 'failed';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum TransactionStatus: string
             self::COMPLETED => 'Selesai',
             self::CANCELLED => 'Dibatalkan',
             self::RETURNED => 'Dikembalikan',
+            self::FAILED => 'Gagal',
         };
     }
 
@@ -35,6 +37,7 @@ enum TransactionStatus: string
             self::COMPLETED => 'success',
             self::CANCELLED => 'danger',
             self::RETURNED => 'danger',
+            self::FAILED => 'danger',
         };
     }
 }

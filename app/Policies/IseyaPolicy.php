@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\Iseya;
 use App\Models\User;
+use App\Models\Iseya;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class IseyaPolicy

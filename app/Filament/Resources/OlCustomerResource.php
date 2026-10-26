@@ -18,7 +18,7 @@ class OlCustomerResource extends Resource
 
     protected static ?string $navigationLabel = 'Customer Online';
 
-    protected static ?string $navigationGroup = 'Master website ';
+    protected static ?string $navigationGroup = 'Master website';
 
     protected static ?string $modelLabel = 'Customer Online ';
 

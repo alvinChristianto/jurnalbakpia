@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\OtherProductTransaction;
 use App\Models\User;
+use App\Models\OtherProductTransaction;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class OtherProductTransactionPolicy

@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\BakpiaShipment;
 use App\Models\User;
+use App\Models\BakpiaShipment;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class BakpiaShipmentPolicy

@@ -23,6 +23,8 @@ class OlEcommerceTransaction extends Model
         'invoice_number',
         'ol_customer_id',
         'subtotal',
+        'subtotal_before_discount',
+        'total_discount',
         'shipping_cost',
         'service_fee',
         'grand_total',
@@ -43,6 +45,8 @@ class OlEcommerceTransaction extends Model
 
     protected $casts = [
         'status' => TransactionStatus::class,
+        'subtotal_before_discount' => 'decimal:2',
+        'total_discount' => 'decimal:2',
         'requested_shipping_datetime' => 'datetime',
         'shipping_address_snapshot' => 'array',
         'paid_at' => 'datetime',

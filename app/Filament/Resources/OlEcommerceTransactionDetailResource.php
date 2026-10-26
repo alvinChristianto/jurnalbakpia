@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\DiscountType;
 use App\Filament\Resources\OlEcommerceTransactionDetailResource\Pages;
 use App\Models\OlEcommerceTransactionDetail;
 use Filament\Forms;
@@ -21,7 +22,7 @@ class OlEcommerceTransactionDetailResource extends Resource
 
     protected static ?string $navigationLabel = 'Detail Transaksi Online';
 
-    protected static ?string $navigationGroup = 'Master website ';
+    protected static ?string $navigationGroup = 'Master website';
 
     protected static ?string $modelLabel = 'Detail Transaksi Online';
 
@@ -70,6 +71,20 @@ class OlEcommerceTransactionDetailResource extends Resource
                 Tables\Columns\TextColumn::make('price_per_item')
                     ->numeric()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('original_price')
+                    ->label('Harga Sebelum Diskon')
+                    ->placeholder('—')
+                    ->numeric()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('discount_type')
+                    ->label('Tipe Diskon')
+                    ->badge()
+                    ->formatStateUsing(fn ($state): string => $state instanceof DiscountType ? $state->label() : '—')
+                    ->color(fn ($state): string => $state instanceof DiscountType && $state !== DiscountType::NONE ? 'success' : 'gray'),
+                Tables\Columns\TextColumn::make('discount_amount')
+                    ->label('Nominal Diskon')
+                    ->numeric()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('note')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
@@ -106,6 +121,10 @@ class OlEcommerceTransactionDetailResource extends Resource
                                 Column::make('product.name')->heading('Product Name'),
                                 Column::make('quantity')->heading('Quantity'),
                                 Column::make('price_per_item')->heading('Price Per Item'),
+                                Column::make('original_price')->heading('Price Before Discount'),
+                                Column::make('discount_type')->heading('Discount Type')
+                                    ->formatStateUsing(fn ($state): string => $state instanceof DiscountType ? $state->label() : ($state ?? '')),
+                                Column::make('discount_amount')->heading('Discount Amount'),
                                 Column::make('note')->heading('Note'),
                                 Column::make('created_at')->heading('Created At'),
                                 Column::make('updated_at')->heading('Updated At'),

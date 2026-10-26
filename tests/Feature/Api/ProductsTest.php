@@ -82,4 +82,54 @@ class ProductsTest extends TestCase
             ->assertJsonPath('data.total', 0)
             ->assertJsonPath('data.data', []);
     }
+
+    public function test_products_ids_filter_returns_matching_active_products_with_discount_fields(): void
+    {
+        $active = OlProduct::create([
+            'name' => 'Bakpia Kacang Hijau',
+            'price' => 25000,
+            'category' => 'BAKPIA',
+            'status' => 'ACTIVE',
+        ]);
+        $inactive = OlProduct::create([
+            'name' => 'Hidden Product',
+            'price' => 1000,
+            'category' => 'OTHER',
+            'status' => 'INACTIVE',
+        ]);
+
+        $response = $this->getJson("/api/products?ids={$active->id},{$inactive->id}");
+
+        $response->assertOk()
+            ->assertJson(['success' => true])
+            ->assertJsonPath('data.total', 1)
+            ->assertJsonPath('data.data.0.id', $active->id)
+            ->assertJsonPath('data.data.0.price', 25000)
+            ->assertJsonPath('data.data.0.original_price', null)
+            ->assertJsonPath('data.data.0.discount_type', null)
+            ->assertJsonPath('data.data.0.discount_source', null);
+    }
+
+    public function test_products_ids_filter_rejects_more_than_50_ids(): void
+    {
+        $ids = implode(',', range(1, 51));
+
+        $this->getJson("/api/products?ids={$ids}")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('ids');
+    }
+
+    public function test_products_ids_filter_without_value_falls_back_to_listing(): void
+    {
+        OlProduct::create([
+            'name' => 'Bakpia Kacang Hijau',
+            'price' => 25000,
+            'category' => 'BAKPIA',
+            'status' => 'ACTIVE',
+        ]);
+
+        $this->getJson('/api/products?ids=')
+            ->assertOk()
+            ->assertJsonPath('data.total', 1);
+    }
 }

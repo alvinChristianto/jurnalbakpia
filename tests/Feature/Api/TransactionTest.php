@@ -107,4 +107,57 @@ class TransactionTest extends TestCase
         $invoices = collect($response->json('data.orders'))->pluck('invoice_number')->all();
         $this->assertEqualsCanonicalizing(['INV-ALICE-1', 'INV-ALICE-2'], $invoices);
     }
+
+    public function test_invoice_pdf_downloads_for_discounted_and_plain_orders(): void
+    {
+        $customer = OlCustomer::create([
+            'name' => 'Buyer',
+            'email' => 'buyer2@example.com',
+            'password' => Hash::make('password1'),
+        ]);
+        $product = OlProduct::create([
+            'name' => 'Bakpia Keju',
+            'price' => 35000,
+            'category' => 'BAKPIA',
+            'status' => 'ACTIVE',
+        ]);
+        $tx = OlEcommerceTransaction::create([
+            'invoice_number' => 'INV-DISC-1',
+            'ol_customer_id' => $customer->id,
+            'subtotal' => 87000,
+            'subtotal_before_discount' => 140000,
+            'total_discount' => 55000,
+            'shipping_cost' => 10000,
+            'service_fee' => 7000,
+            'grand_total' => 97000,
+            'shipping_address_snapshot' => ['name' => 'Buyer', 'fullAddress' => 'Jl. Test 1'],
+            'status' => 'pending',
+        ]);
+        OlEcommerceTransactionDetail::create([
+            'transaction_id' => $tx->id,
+            'product_id' => $product->id,
+            'product_name_snapshot' => $product->name,
+            'quantity' => 2,
+            'price_per_item' => 35000,
+            'original_price' => 70000,
+            'discount_type' => 'percent',
+            'discount_amount' => 27500,
+        ]);
+        OlEcommerceTransactionDetail::create([
+            'transaction_id' => $tx->id,
+            'product_id' => $product->id,
+            'product_name_snapshot' => $product->name.' (isi 18)',
+            'quantity' => 1,
+            'price_per_item' => 35000,
+        ]);
+
+        $response = $this->getJson('/api/transaction/INV-DISC-1/invoice');
+        $response->assertOk();
+        $this->assertStringContainsString('application/pdf', $response->headers->get('Content-Type'));
+    }
+
+    public function test_invoice_pdf_returns_404_for_unknown_invoice(): void
+    {
+        $this->getJson('/api/transaction/INV-DOES-NOT-EXIST/invoice')->assertStatus(404);
+    }
 }
