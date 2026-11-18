@@ -45,7 +45,7 @@ class BakpiaController extends Controller
         $products = OlProduct::where('status', 'ACTIVE')
             ->orderBy('sort_order')
             ->orderByDesc('created_at')
-            ->paginate(12);
+            ->paginate(100);
 
         $items = $this->applyPricing($products->getCollection());
 
