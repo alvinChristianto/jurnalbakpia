@@ -60,7 +60,8 @@ class OlProductResource extends Resource
                                 'Pisang' => 'Pisang',
                                 'Coklat_Almond' => 'Coklat Almond',
                                 'Kacang_Mete' => 'Kacang Mete',
-                                'Original' => 'Original',
+                                'Kacang_Hijau' => 'Kacang Hijau',
+                                'Produk_Lain' => 'Produk Lain',
                             ])
                             ->searchable()
                             ->native(false)
